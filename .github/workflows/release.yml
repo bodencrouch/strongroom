@@ -1,77 +1,177 @@
 name: Release
+# Builds unsigned installers on tagged pushes (v*) and attaches them to a GitHub
+# Release in this repository. Nothing is published anywhere else.
+# A manual run (workflow_dispatch) builds the artifacts but does not create a release.
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Version tag matching the app (created after successful builds if absent)
-        required: true
-        type: string
 permissions:
   contents: read
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  prepare:
+  verify:
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
-      sha: ${{ steps.version.outputs.sha }}
+    timeout-minutes: 30
     steps:
-      - name: Require main for manual releases
-        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
-        run: echo 'Run manual releases from main.' && exit 1
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Validate release version
-        id: version
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tag matches app version
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-        run: node scripts/release.mjs validate "$RELEASE_TAG"
-  check:
-    needs: prepare
-    uses: ./.github/workflows/check.yml
-    with:
-      ref: ${{ needs.prepare.outputs.sha }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(node -p "require('./apps/desktop/package.json').version")"
+          [ "$TAG" = "v$version" ] || { echo "Tag $TAG does not match apps/desktop version $version" >&2; exit 1; }
+      - run: pnpm run check
+      - run: pnpm run build
+
   desktop:
-    needs: prepare
-    uses: ./.github/workflows/desktop.yml
-    with:
-      ref: ${{ needs.prepare.outputs.sha }}
+    name: Desktop (${{ matrix.name }})
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    # The macOS build is best effort: it is unsigned and the native AutoFill extension
+    # may need Apple signing assets this repository does not have. A failure there must
+    # not block the Linux and Windows installers.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            runner: ubuntu-latest
+            script: package:linux
+            experimental: false
+          - name: Windows
+            runner: windows-latest
+            script: package:win
+            experimental: false
+          - name: macOS
+            runner: macos-latest
+            script: package:mac
+            experimental: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Package (unsigned)
+        run: pnpm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-desktop-${{ matrix.name }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
   extensions:
-    needs: prepare
-    uses: ./.github/workflows/extensions.yml
-    with:
-      ref: ${{ needs.prepare.outputs.sha }}
-  publish:
-    needs: [prepare, check, desktop, extensions]
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run extension:zip
+      - run: pnpm run package:raycast
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-browser-extensions
+          path: |
+            apps/extension/.output/*.zip
+            !apps/extension/.output/*safari*.zip
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-raycast
+          path: release/strongroom-*-raycast.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  cli:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter strongroom run build
+      # Writes a tarball only. This does not publish it.
+      - run: mkdir -p release && npm pack --pack-destination ../../release
+        working-directory: apps/cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-cli
+          path: release/strongroom-*.tgz
+          if-no-files-found: error
+          retention-days: 14
+
+  github-release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, extensions, cli]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare.outputs.sha }}
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*
           path: release
           merge-multiple: true
-      - name: Verify complete asset set and write checksums
+      - name: Write checksums
+        working-directory: release
+        run: |
+          ls -l
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Create GitHub Release
         env:
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-        run: node scripts/release.mjs verify "$RELEASE_TAG" release
-      - name: Publish preview release
-        env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
-        run: node scripts/release.mjs publish "$RELEASE_TAG" release
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" release/* \
+            --verify-tag \
+            --title "Strongroom $TAG" \
+            --notes-file .github/release-notes.md

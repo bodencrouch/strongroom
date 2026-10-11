@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in Strongroom does not work.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste vault contents, session keys (`BW_SESSION`) or raw `bw` output here. Use a fake item that shows the bug. Security problems go through the Security tab, not this form.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where does it happen?
+      options: [Desktop app, Browser extension, Raycast extension, CLI]
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Strongroom version
+      description: Release tag, or the commit hash if you built from source.
+    validations:
+      required: true
+  - type: input
+    id: bw
+    attributes:
+      label: bw version
+      description: Output of `bw --version`.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, with fake data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected and what happened
+    validations:
+      required: true

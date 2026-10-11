@@ -1,0 +1,25 @@
+name: Feature request
+description: Something Strongroom should do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check docs/PARITY.md first. Organizations, SSO and emergency access need the server or key handling that `bw` keeps, so a client cannot add them.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Strongroom to do?
+    validations:
+      required: true
+  - type: textarea
+    id: bw
+    attributes:
+      label: Does `bw` already have a command for it?
+      description: If you know the command, name it. If not, say so.

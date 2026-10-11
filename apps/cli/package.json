@@ -1,14 +1,40 @@
 {
-  "name": "@strongroom/cli",
+  "name": "strongroom",
   "version": "0.2.1",
-  "private": true,
+  "private": false,
+  "description": "Unofficial command-line extras for Bitwarden: one-time codes and vault health, on top of the official bw CLI.",
+  "keywords": [
+    "bitwarden",
+    "strongroom",
+    "totp",
+    "password-manager",
+    "vault",
+    "cli"
+  ],
+  "homepage": "https://bodencrouch.github.io/strongroom/",
+  "bugs": {
+    "url": "https://github.com/bodencrouch/strongroom/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bodencrouch/strongroom.git",
+    "directory": "apps/cli"
+  },
+  "license": "MIT",
   "type": "module",
-  "description": "Command-line extras for Strongroom: one-time codes and vault health, on top of the official Bitwarden CLI.",
   "bin": {
-    "strongroom": "src/index.ts"
+    "strongroom": "dist/strongroom.mjs"
+  },
+  "files": [
+    "dist/strongroom.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.18"
   },
   "scripts": {
+    "build": "node ../../scripts/build-cli.mjs",
     "start": "node src/index.ts"
-  },
-  "license": "MIT"
+  }
 }

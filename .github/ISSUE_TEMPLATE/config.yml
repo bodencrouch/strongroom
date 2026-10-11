@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/bodencrouch/strongroom/security/advisories/new
+    about: Private report. Do not open a public issue for vulnerabilities.
+  - name: Read the docs
+    url: https://bodencrouch.github.io/strongroom/
+    about: Feature map, parity status and install steps.
