@@ -183,7 +183,8 @@ export async function buildAutoFill(root) {
   ]);
   await rm(verifiedServer);
   const group = process.env.STRONGROOM_APP_GROUP ?? 'UNCONFIGURED.app.strongroom.vault';
-  if (!/^[A-Z0-9]+\.app\.strongroom\.vault$/.test(group)) throw new Error('Invalid STRONGROOM_APP_GROUP');
+  if (!/^[A-Z0-9]+\.app\.strongroom\.vault$/.test(group))
+    throw new Error('Invalid STRONGROOM_APP_GROUP');
   const { version } = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid native bundle version');
   await writeFile(

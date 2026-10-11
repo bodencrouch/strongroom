@@ -65,7 +65,9 @@ if (host.team !== extension.team)
   throw new Error('Both profiles must belong to the same Apple team.');
 const group = `${host.team}.app.strongroom.vault`;
 const safariProfile = process.env.STRONGROOM_SAFARI_PROFILE;
-const safari = safariProfile ? profile(safariProfile, 'app.strongroom.vault.safari', false) : undefined;
+const safari = safariProfile
+  ? profile(safariProfile, 'app.strongroom.vault.safari', false)
+  : undefined;
 if (safari && safari.team !== host.team)
   throw new Error('Safari and Strongroom must use the same signing team.');
 const env = {
@@ -194,5 +196,7 @@ if (release) {
   const { notarizeRelease } = await import('./notarize-release.mjs');
   await notarizeRelease({ root, app, identity, notarizationProfile, env });
 } else {
-  console.log('Signed AutoFill build: release/mac-arm64/Strongroom.app. Not installed or notarized.');
+  console.log(
+    'Signed AutoFill build: release/mac-arm64/Strongroom.app. Not installed or notarized.',
+  );
 }

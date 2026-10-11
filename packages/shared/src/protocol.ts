@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cardBrands, cardMonths, lockTimeoutMinutes } from './types';
+import { cardBrands, cardMonths, importFormats, lockTimeoutMinutes } from './types';
 
 export const lockTimeoutSchema = z.literal(lockTimeoutMinutes);
 export const passwordOptionsSchema = z
@@ -36,6 +36,28 @@ const challengeAnswer = z.union([
 const id = z.string().uuid();
 const attachmentId = z.string().min(1).max(200);
 export const browserSaveResultSchema = z.object({ id });
+const sendDays = z.number().int().min(1).max(31);
+const sendDraftBase = {
+  name: z.string().trim().min(1).max(500),
+  notes: z.string().max(1_000),
+  deleteInDays: sendDays,
+  expireInDays: sendDays.nullable(),
+  maxAccessCount: z.number().int().min(1).max(1_000_000).nullable(),
+  password: z.string().max(1_024),
+  disabled: z.boolean(),
+  hideEmail: z.boolean(),
+};
+export const sendDraftSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      ...sendDraftBase,
+      type: z.literal('text'),
+      text: z.string().min(1).max(16_384),
+      hidden: z.boolean(),
+    })
+    .strict(),
+  z.object({ ...sendDraftBase, type: z.literal('file') }).strict(),
+]);
 const folderName = z.string().trim().min(1).max(500);
 const draftBase = {
   id: id.optional(),
@@ -148,7 +170,14 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('confirm'),
-      action: z.enum(['discard', 'trash', 'deleteFolder', 'deleteAttachment']),
+      action: z.enum([
+        'discard',
+        'trash',
+        'deleteFolder',
+        'deleteAttachment',
+        'deleteSend',
+        'exportPlain',
+      ]),
     })
     .strict(),
   z
@@ -216,6 +245,20 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('deleteAttachment'), id, attachmentId }).strict(),
   z.object({ type: z.literal('addAttachment'), id }).strict(),
   z.object({ type: z.literal('generate'), options: passwordOptionsSchema }).strict(),
+  z.object({ type: z.literal('sends') }).strict(),
+  z.object({ type: z.literal('createSend'), draft: sendDraftSchema }).strict(),
+  z.object({ type: z.literal('deleteSend'), id }).strict(),
+  z.object({ type: z.literal('removeSendPassword'), id }).strict(),
+  z.object({ type: z.literal('copySendLink'), id }).strict(),
+  z
+    .object({ type: z.literal('exportVault'), format: z.enum(['csv', 'json', 'encrypted_json']) })
+    .strict(),
+  z
+    .object({
+      type: z.literal('importVault'),
+      format: z.enum(importFormats.map(([format]) => format) as [string, ...string[]]),
+    })
+    .strict(),
   z.object({ type: z.literal('browserSetup') }).strict(),
   z
     .object({ type: z.literal('connectBrowser'), browser: z.enum(['safari', 'chrome', 'firefox']) })

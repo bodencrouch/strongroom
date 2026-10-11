@@ -137,6 +137,10 @@ export class DesktopLifecycle {
     return this.copyValue((vault) => vault.historyValue(id, index));
   }
 
+  copySendLink(id: string) {
+    return this.copyValue((vault) => vault.sendLink(id));
+  }
+
   private copyValue(read: (vault: Vault) => string) {
     const epoch = this.epoch;
     this.clipboardQueue = this.clipboardQueue

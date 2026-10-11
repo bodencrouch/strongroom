@@ -27,35 +27,35 @@ Status words: **Done** works in Strongroom. **Partial** works with limits. **Pla
 
 ## Sending and sharing
 
-| Feature                            | Status            | Notes                                                                          |
-| ---------------------------------- | ----------------- | ------------------------------------------------------------------------------ |
-| File Send                          | Partial           | `strongroom send`. The server decides if the account may                             |
-| Text Send, list and delete Sends   | Planned           |                                                                                |
-| Sharing items with an organization | Not possible here | Organization keys                                                              |
-| Emergency access                   | Not possible here | Server API and a key exchange between accounts. See [FEATURES.md](FEATURES.md) |
+| Feature                                             | Status            | Notes                                                                          |
+| --------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------ |
+| File Send: create                                   | Done              | Desktop app and `strongroom send`. The server decides if the account may       |
+| Text Send, list, copy link, remove password, delete | Done              | Editing an existing Send is not built                                          |
+| Sharing items with an organization                  | Not possible here | Organization keys                                                              |
+| Emergency access                                    | Not possible here | Server API and a key exchange between accounts. See [FEATURES.md](FEATURES.md) |
 
 ## Filling and generating
 
-| Feature                                  | Status  | Notes                                                          |
-| ---------------------------------------- | ------- | -------------------------------------------------------------- |
-| Browser fill (Chromium, Firefox, Safari) | Done    |                                                                |
-| macOS AutoFill                           | Done    |                                                                |
-| Password generator                       | Partial | Passwords only. Passphrase and username generators are planned |
-| Save new logins from the browser         | Done    |                                                                |
+| Feature                                      | Status | Notes                                   |
+| -------------------------------------------- | ------ | --------------------------------------- |
+| Browser fill (Chromium, Firefox, Safari)     | Done   |                                         |
+| macOS AutoFill                               | Done   |                                         |
+| Password, passphrase and username generators | Done   | Passphrases use the EFF large word list |
+| Save new logins from the browser             | Done   |                                         |
 
 ## Account and security
 
-| Feature                                                                     | Status            | Notes                                                                   |
-| --------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------- |
-| Unlock with master password                                                 | Done              |                                                                         |
-| Unlock with Touch ID                                                        | Done              | macOS only                                                              |
-| Two-step sign-in prompts (authenticator, YubiKey, email)                    | Done              |                                                                         |
-| Auto-lock timer                                                             | Done              |                                                                         |
-| Vault health reports                                                        | Done              | See [FEATURES.md](FEATURES.md)                                          |
-| Single sign-on, device approval, passkey sign-in                            | Not possible here | The CLI signs in with a password or API key                             |
-| Change master password, KDF settings, set up two-step login, delete account | Not possible here | Web vault                                                               |
-| Import and export                                                           | Planned           | `bw import` and `bw export` exist                                       |
-| Self-hosted server                                                          | Partial           | Server address can be set. Not tested against a real self-hosted server |
+| Feature                                                                     | Status            | Notes                                                                                                              |
+| --------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Unlock with master password                                                 | Done              |                                                                                                                    |
+| Unlock with Touch ID                                                        | Done              | macOS only                                                                                                         |
+| Two-step sign-in prompts (authenticator, YubiKey, email)                    | Done              |                                                                                                                    |
+| Auto-lock timer                                                             | Done              |                                                                                                                    |
+| Vault health reports                                                        | Done              | See [FEATURES.md](FEATURES.md)                                                                                     |
+| Single sign-on, device approval, passkey sign-in                            | Not possible here | The CLI signs in with a password or API key                                                                        |
+| Change master password, KDF settings, set up two-step login, delete account | Not possible here | Web vault                                                                                                          |
+| Import (29 formats) and export (CSV, JSON, account-key encrypted JSON)      | Done              | Password-protected exports and imports are not supported, because `bw` would need the password on its command line |
+| Self-hosted server                                                          | Partial           | Server address can be set. Not tested against a real self-hosted server                                            |
 
 ## Out of scope
 

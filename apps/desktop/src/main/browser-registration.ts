@@ -20,7 +20,10 @@ export async function installBrowser(options: BrowserRegistration, root?: string
   // when STRONGROOM_BROWSER_ROOT was supplied for an isolated run.
   if (windows && root !== undefined)
     throw new Error('Windows browser registration cannot use an isolated browser root.');
-  const launcher = join(options.dataDir, windows ? 'strongroom-native-host.cmd' : 'strongroom-native-host');
+  const launcher = join(
+    options.dataDir,
+    windows ? 'strongroom-native-host.cmd' : 'strongroom-native-host',
+  );
   if (options.nativeHost) await rm(launcher, { force: true });
   else {
     const configPath = join(options.dataDir, 'bridge.json');

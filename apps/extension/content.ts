@@ -413,7 +413,8 @@ export function startContent(ctx: ContentScriptContext) {
     const targets = fillTargets(field);
     if (!targets) {
       response.value.password = '';
-      const error = 'This looks like a signup or password-change form. Copy from Strongroom instead.';
+      const error =
+        'This looks like a signup or password-change form. Copy from Strongroom instead.';
       showFillError(error);
       return { ok: false, error };
     }

@@ -114,32 +114,42 @@ export function installNativeInteractions(window: BrowserWindow) {
       const controller = new AbortController();
       confirmation = controller;
       try {
-        const trash = action === 'trash';
-        const folder = action === 'deleteFolder';
-        const attachment = action === 'deleteAttachment';
+        const copy = {
+          discard: {
+            message: 'Discard changes?',
+            detail: 'Your unsaved changes will be lost.',
+            buttons: ['Keep editing', 'Discard changes'],
+          },
+          trash: {
+            message: 'Move this item to Trash?',
+            detail: 'You can restore it from Trash. This does not delete it permanently.',
+            buttons: ['Cancel', 'Move to Trash'],
+          },
+          deleteFolder: {
+            message: 'Delete this folder?',
+            detail: 'Items in this folder move to No folder. They are not deleted.',
+            buttons: ['Cancel', 'Delete folder'],
+          },
+          deleteAttachment: {
+            message: 'Delete this attachment?',
+            detail: 'The file is removed from this item. This cannot be undone.',
+            buttons: ['Cancel', 'Delete attachment'],
+          },
+          deleteSend: {
+            message: 'Delete this Send?',
+            detail: 'The link stops working right away. This cannot be undone.',
+            buttons: ['Cancel', 'Delete Send'],
+          },
+          exportPlain: {
+            message: 'Export without encryption?',
+            detail:
+              'The file will hold every password and note in your vault as plain text. Anyone who can open it can read them. Keep it safe and delete it when you are done.',
+            buttons: ['Cancel', 'Export anyway'],
+          },
+        }[action];
         const result = await dialog.showMessageBox(window, {
           type: 'warning',
-          message: attachment
-            ? 'Delete this attachment?'
-            : folder
-              ? 'Delete this folder?'
-              : trash
-                ? 'Move this item to Trash?'
-                : 'Discard changes?',
-          detail: attachment
-            ? 'The file is removed from this item. This cannot be undone.'
-            : folder
-              ? 'Items in this folder move to No folder. They are not deleted.'
-              : trash
-                ? 'You can restore it from Trash. This does not delete it permanently.'
-                : 'Your unsaved changes will be lost.',
-          buttons: attachment
-            ? ['Cancel', 'Delete attachment']
-            : folder
-              ? ['Cancel', 'Delete folder']
-              : trash
-                ? ['Cancel', 'Move to Trash']
-                : ['Keep editing', 'Discard changes'],
+          ...copy,
           defaultId: 0,
           cancelId: 0,
           noLink: true,

@@ -3,7 +3,7 @@ import { randomInt } from 'node:crypto';
 import { CodeRejectedError, type CliPort, type CliPrompt } from './cli';
 import { fillableUrl, matchesUri, normalizeServer, webUrl, type CipherUri } from './matching';
 import { UserError, type BrowserVaultQuery } from '@strongroom/shared/protocol';
-import { cardBrands, cardMonths } from '@strongroom/shared/types';
+import { cardBrands, cardMonths, importFormats } from '@strongroom/shared/types';
 import { totpFromField, type TotpCode } from '@strongroom/shared/totp';
 import {
   buildHealthReport,
@@ -33,6 +33,7 @@ import type {
   CaptureOffer,
   ChallengeAnswer,
   AttachmentInfo,
+  ExportFormat,
   ExtraField,
   Folder,
   HealthSummary,
@@ -47,6 +48,8 @@ import type {
   LoginInput,
   PasswordHistoryEntry,
   PasswordOptions,
+  SendDraft,
+  SendSummary,
   TwoStepMethod,
   VaultState,
 } from '@strongroom/shared/types';
@@ -100,6 +103,19 @@ export type PathPicker = (suggestedName: string) => Promise<string | null>;
 
 const ATTACHMENT_REFUSED =
   'Bitwarden did not accept the attachment. Your plan or server may not allow it.';
+const SEND_REFUSED = 'Bitwarden did not accept the Send. Your plan or server may not allow it.';
+const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
+  csv: 'csv',
+  json: 'json',
+  encrypted_json: 'json',
+};
+
+/** What the vault needs from the window to export: a confirmation and a save location. */
+export interface ExportUi {
+  /** Warns that the file holds every secret in plain text. Resolves true to go on. */
+  confirmPlain: () => Promise<boolean>;
+  pick: PathPicker;
+}
 
 /** The CLI's numeric identifiers for the two-step methods it can complete. */
 const METHOD_FLAGS: Record<TwoStepMethod, string> = {
@@ -164,6 +180,7 @@ export class Vault extends EventEmitter {
   private session = '';
   private ciphers = new Map<string, Cipher>();
   private folderNames = new Map<string, string>();
+  private sendList = new Map<string, { summary: SendSummary; url: string }>();
   private generation = 0;
   private revision = 0;
   private itemsRevision = 0;
@@ -265,9 +282,12 @@ export class Vault extends EventEmitter {
         server,
       };
       try {
-        session = await this.cli.run(['unlock', '--passwordenv', 'STRONGROOM_MASTER_PASSWORD', '--raw'], {
-          password: input.password,
-        });
+        session = await this.cli.run(
+          ['unlock', '--passwordenv', 'STRONGROOM_MASTER_PASSWORD', '--raw'],
+          {
+            password: input.password,
+          },
+        );
       } catch (error) {
         if (generation === this.generation) this.publish();
         throw error;
@@ -473,6 +493,7 @@ export class Vault extends EventEmitter {
     this.session = '';
     this.ciphers.clear();
     this.folderNames.clear();
+    this.sendList.clear();
     this.trashLoaded = false;
     this.trashLoading = undefined;
     this.captured = undefined;
@@ -682,7 +703,7 @@ export class Vault extends EventEmitter {
     this.assertGeneration(generation);
     this.requireUnlocked();
     if (!path) return false;
-    await this.attachmentCommand(
+    await this.guardedCommand(
       generation,
       ['get', 'attachment', attachment.id, '--itemid', id, '--output', path],
       'Bitwarden could not download the attachment.',
@@ -695,7 +716,7 @@ export class Vault extends EventEmitter {
     if (!(cipher.attachments ?? []).some((entry) => entry.id === attachmentId))
       throw new UserError('That attachment is no longer available.');
     const generation = this.generation;
-    await this.attachmentCommand(
+    await this.guardedCommand(
       generation,
       ['delete', 'attachment', attachmentId, '--itemid', id],
       'Bitwarden could not delete the attachment.',
@@ -711,12 +732,168 @@ export class Vault extends EventEmitter {
     this.assertGeneration(generation);
     this.requireUnlocked();
     if (!path) return null;
-    await this.attachmentCommand(
+    await this.guardedCommand(
       generation,
       ['create', 'attachment', '--file', path, '--itemid', id],
       ATTACHMENT_REFUSED,
     );
     return this.refreshItem(id, generation);
+  }
+
+  /** The account's Sends, read fresh from Bitwarden. Nothing is kept once the vault locks. */
+  async sends(): Promise<SendSummary[]> {
+    this.requireUnlocked();
+    return this.refreshSends(this.generation);
+  }
+
+  /** Creates a Send. A file Send asks `pick` for its file. Resolves null when they cancel. */
+  async createSend(draft: SendDraft, pick: () => Promise<string | null>) {
+    this.requireUnlocked();
+    const generation = this.generation;
+    let path = '';
+    if (draft.type === 'file') {
+      const picked = await pick();
+      this.assertGeneration(generation);
+      this.requireUnlocked();
+      if (!picked) return null;
+      path = picked;
+    }
+    const day = 86_400_000;
+    const payload = {
+      type: draft.type === 'text' ? 0 : 1,
+      name: draft.name,
+      notes: draft.notes || null,
+      text: draft.type === 'text' ? { text: draft.text, hidden: draft.hidden } : null,
+      file: draft.type === 'file' ? { fileName: path } : null,
+      maxAccessCount: draft.maxAccessCount,
+      deletionDate: new Date(Date.now() + draft.deleteInDays * day).toISOString(),
+      expirationDate:
+        draft.expireInDays === null
+          ? null
+          : new Date(Date.now() + draft.expireInDays * day).toISOString(),
+      // The password travels on stdin, never in the argument list.
+      password: draft.password || null,
+      emails: null,
+      disabled: draft.disabled,
+      hideEmail: draft.hideEmail,
+    };
+    await this.guardedCommand(
+      generation,
+      ['send', 'create'],
+      SEND_REFUSED,
+      Buffer.from(JSON.stringify(payload)).toString('base64'),
+    );
+    return this.refreshSends(generation);
+  }
+
+  async deleteSend(id: string) {
+    this.knownSend(id);
+    const generation = this.generation;
+    await this.guardedCommand(
+      generation,
+      ['send', 'delete', id],
+      'Bitwarden could not delete the Send.',
+    );
+    this.sendList.delete(id);
+    return this.refreshSends(generation);
+  }
+
+  async removeSendPassword(id: string) {
+    this.knownSend(id);
+    const generation = this.generation;
+    await this.guardedCommand(
+      generation,
+      ['send', 'remove-password', id],
+      'Bitwarden could not remove the password.',
+    );
+    return this.refreshSends(generation);
+  }
+
+  /** The Send's share link, for the main process to put on the clipboard. */
+  sendLink(id: string) {
+    const { url } = this.knownSend(id);
+    if (!url) throw new UserError('That Send has no link to copy.');
+    return url;
+  }
+
+  private knownSend(id: string) {
+    this.requireUnlocked();
+    const entry = this.sendList.get(id);
+    if (!entry) throw new UserError('That Send is no longer available. Reload your Sends.');
+    return entry;
+  }
+
+  private async refreshSends(generation: number) {
+    let listed: SendSummary[];
+    let entries: [string, { summary: SendSummary; url: string }][];
+    try {
+      const rows = JSON.parse(await this.cli.run(['send', 'list'], { session: this.session }));
+      if (!Array.isArray(rows)) throw new Error('not a list');
+      entries = rows.map((row) => {
+        const entry = parseSend(row);
+        return [entry.summary.id, entry];
+      });
+      listed = entries.map(([, entry]) => entry.summary);
+    } catch {
+      this.assertGeneration(generation);
+      throw new UserError('Could not load your Sends. Try again.');
+    }
+    this.assertGeneration(generation);
+    this.sendList = new Map(entries);
+    return listed.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Writes the vault to a file the user picks. Plain-text formats ask for
+   * confirmation first. Resolves false when they decline or cancel.
+   */
+  async exportVault(format: ExportFormat, ui: ExportUi) {
+    this.requireUnlocked();
+    const extension = EXPORT_EXTENSIONS[format];
+    if (!extension) throw new UserError('Choose an export format.');
+    const generation = this.generation;
+    if (format !== 'encrypted_json') {
+      const confirmed = await ui.confirmPlain();
+      this.assertGeneration(generation);
+      this.requireUnlocked();
+      if (!confirmed) return false;
+    }
+    const path = await ui.pick(`strongroom-export.${extension}`);
+    this.assertGeneration(generation);
+    this.requireUnlocked();
+    if (!path) return false;
+    // Without --password, encrypted_json is tied to this account and needs no secret on the command line.
+    await this.guardedCommand(
+      generation,
+      ['export', '--format', format, '--output', path],
+      'Bitwarden could not export your vault. An organization policy may prevent it.',
+    );
+    return true;
+  }
+
+  /** Imports a file the user picks, then reloads the vault. Resolves null when they cancel. */
+  async importVault(format: string, pick: () => Promise<string | null>) {
+    this.requireUnlocked();
+    if (!importFormats.some(([id]) => id === format))
+      throw new UserError('Choose a file format to import.');
+    const generation = this.generation;
+    const path = await pick();
+    this.assertGeneration(generation);
+    this.requireUnlocked();
+    if (!path) return null;
+    await this.guardedCommand(
+      generation,
+      ['import', format, path],
+      'Bitwarden could not import that file. Check that the format matches the file.',
+    );
+    try {
+      return await this.sync();
+    } catch {
+      this.assertGeneration(generation);
+      throw new UserError(
+        'The file was sent to Bitwarden, but the list could not refresh. Sync your vault.',
+      );
+    }
   }
 
   private attachable(id: string) {
@@ -726,10 +903,18 @@ export class Vault extends EventEmitter {
     return cipher;
   }
 
-  /** Runs an attachment command. The CLI's own output and errors never leave this method. */
-  private async attachmentCommand(generation: number, args: string[], failure: string) {
+  /** Runs a command for its effect. The CLI's own output and errors never leave this method. */
+  private async guardedCommand(
+    generation: number,
+    args: string[],
+    failure: string,
+    input?: string,
+  ) {
     try {
-      await this.cli.run(args, { session: this.session });
+      await this.cli.run(args, {
+        session: this.session,
+        ...(input === undefined ? {} : { input }),
+      });
     } catch {
       this.assertGeneration(generation);
       throw new UserError(failure);
@@ -1129,7 +1314,8 @@ export class Vault extends EventEmitter {
     const credential = latest.login?.fido2Credentials?.find(
       (entry) => entry.credentialId === credentialId,
     );
-    if (!credential) throw new UserError('This passkey is no longer in your vault. Sync Strongroom.');
+    if (!credential)
+      throw new UserError('This passkey is no longer in your vault. Sync Strongroom.');
     credential.counter = String(Math.max(counter, (Number(credential.counter) || 0) + 1));
     const payload = Buffer.from(JSON.stringify(latest)).toString('base64');
     const saved = JSON.parse(
@@ -1392,6 +1578,7 @@ export class Vault extends EventEmitter {
         this.session = '';
         this.ciphers.clear();
         this.folderNames.clear();
+        this.sendList.clear();
         this.trashLoaded = false;
         this.trashLoading = undefined;
         this.state.status = 'locked';
@@ -1714,6 +1901,34 @@ function summarize(cipher: Cipher): ItemSummary {
     hasPasskey: Boolean(cipher.login?.fido2Credentials?.length),
     restricted: isRestricted(cipher),
     folderId: cipher.folderId ?? null,
+  };
+}
+
+function parseSend(row: unknown): { summary: SendSummary; url: string } {
+  const send = row as Record<string, unknown>;
+  const text = (value: unknown) => (typeof value === 'string' ? value : null);
+  const count = (value: unknown) => (typeof value === 'number' ? value : null);
+  if (
+    typeof send?.id !== 'string' ||
+    typeof send.name !== 'string' ||
+    (send.type !== 0 && send.type !== 1)
+  )
+    throw new Error('unexpected Send');
+  const file = send.file as Record<string, unknown> | null | undefined;
+  return {
+    summary: {
+      id: send.id,
+      name: send.name,
+      type: send.type,
+      fileName: send.type === 1 ? text(file?.fileName) : null,
+      deletionDate: text(send.deletionDate),
+      expirationDate: text(send.expirationDate),
+      maxAccessCount: count(send.maxAccessCount),
+      accessCount: count(send.accessCount) ?? 0,
+      disabled: send.disabled === true,
+      passwordSet: send.passwordSet === true,
+    },
+    url: text(send.accessUrl) ?? '',
   };
 }
 

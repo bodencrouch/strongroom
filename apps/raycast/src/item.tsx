@@ -156,7 +156,11 @@ export function ItemPage({ id, showNote = false }: { id: string; showNote?: bool
   }
   const actions = (primary?: CopyField | 'open') => (
     <ActionPanel>
-      {item ? <ItemActions item={item} primary={primary} onFailure={unavailable} /> : <OpenStrongroom />}
+      {item ? (
+        <ItemActions item={item} primary={primary} onFailure={unavailable} />
+      ) : (
+        <OpenStrongroom />
+      )}
     </ActionPanel>
   );
   if (!item || item.type === 2 || showNote) {

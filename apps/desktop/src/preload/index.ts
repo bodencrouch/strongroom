@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { StrongroomApi, VaultState, WindowCommand, WindowAppearance } from '@strongroom/shared/types';
+import type {
+  StrongroomApi,
+  VaultState,
+  WindowCommand,
+  WindowAppearance,
+} from '@strongroom/shared/types';
 import type { DesktopRequest } from '@strongroom/shared/protocol';
 
 const request = (message: DesktopRequest) => ipcRenderer.invoke('strongroom:request', message);
@@ -46,6 +51,13 @@ const api: StrongroomApi = {
   deleteAttachment: (id, attachmentId) => request({ type: 'deleteAttachment', id, attachmentId }),
   addAttachment: (id) => request({ type: 'addAttachment', id }),
   generate: (options) => request({ type: 'generate', options }),
+  sends: () => request({ type: 'sends' }),
+  createSend: (draft) => request({ type: 'createSend', draft }),
+  deleteSend: (id) => request({ type: 'deleteSend', id }),
+  removeSendPassword: (id) => request({ type: 'removeSendPassword', id }),
+  copySendLink: (id) => request({ type: 'copySendLink', id }),
+  exportVault: (format) => request({ type: 'exportVault', format }),
+  importVault: (format) => request({ type: 'importVault', format }),
   browserSetup: () => request({ type: 'browserSetup' }),
   connectBrowser: (browser) => request({ type: 'connectBrowser', browser }),
   browserConnection: () => request({ type: 'browserConnection' }),

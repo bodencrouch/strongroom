@@ -5,6 +5,7 @@ import {
   FileText,
   Fingerprint,
   FolderSimple,
+  PaperPlaneTilt,
   PencilSimple,
   Vault as FolderKey,
   Key as KeyRound,
@@ -17,9 +18,16 @@ import {
   Trash as Trash2,
   X,
 } from '@phosphor-icons/react';
-import type { Folder, ItemDetail, ItemSummary, MenuPosition, VaultState } from '@strongroom/shared/types';
+import type {
+  Folder,
+  ItemDetail,
+  ItemSummary,
+  MenuPosition,
+  VaultState,
+} from '@strongroom/shared/types';
 import { Auth } from './Auth';
 import { Editor } from './Editor';
+import { Sends } from './Sends';
 import { Settings } from './Settings';
 import { Mark } from './Mark';
 import { Detail } from './Detail';
@@ -239,6 +247,7 @@ function VaultWorkspace({
   const [trashed, setTrashed] = useState<ItemSummary[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [foldersLoaded, setFoldersLoaded] = useState(false);
+  const [sendsOpen, setSendsOpen] = useState(false);
   const [folderEdit, setFolderEdit] = useState<FolderEdit>(null);
   const [folderBusy, setFolderBusy] = useState(false);
   const folderWorking = useRef(false);
@@ -532,7 +541,9 @@ function VaultWorkspace({
       }
       const restore = action === 'restore';
       pending = notify.show('pending', restore ? 'Restoring…' : 'Moving to Trash…');
-      const changed = await (restore ? window.strongroom.restore(item.id) : window.strongroom.remove(item.id));
+      const changed = await (restore
+        ? window.strongroom.restore(item.id)
+        : window.strongroom.remove(item.id));
       if (!alive.current) return;
       notify.settle(
         pending,
@@ -661,6 +672,11 @@ function VaultWorkspace({
     }
   }
 
+  function showFilter(next: Filter) {
+    setSendsOpen(false);
+    setFilter(next);
+  }
+
   const activeFolder = filter.startsWith('folder:')
     ? folders.find((entry) => `folder:${entry.id}` === filter)
     : undefined;
@@ -708,9 +724,9 @@ function VaultWorkspace({
                   type="button"
                   variant="sidebar"
                   key={id}
-                  className={`nav-item ${filter === id ? 'active' : ''}`}
-                  aria-pressed={filter === id}
-                  onClick={() => setFilter(id)}
+                  className={`nav-item ${filter === id && !sendsOpen ? 'active' : ''}`}
+                  aria-pressed={filter === id && !sendsOpen}
+                  onClick={() => showFilter(id)}
                 >
                   <Icon size={16} />
                   <span>{label}</span>
@@ -764,9 +780,9 @@ function VaultWorkspace({
                     <Button
                       type="button"
                       variant="sidebar"
-                      className={`nav-item ${filter === `folder:${folder.id}` ? 'active' : ''}`}
-                      aria-pressed={filter === `folder:${folder.id}`}
-                      onClick={() => setFilter(`folder:${folder.id}`)}
+                      className={`nav-item ${filter === `folder:${folder.id}` && !sendsOpen ? 'active' : ''}`}
+                      aria-pressed={filter === `folder:${folder.id}` && !sendsOpen}
+                      onClick={() => showFilter(`folder:${folder.id}`)}
                     >
                       <FolderSimple size={16} />
                       <span title={folder.name}>{folder.name}</span>
@@ -800,13 +816,25 @@ function VaultWorkspace({
               <Button
                 type="button"
                 variant="sidebar"
-                className={`nav-item ${filter === 'nofolder' ? 'active' : ''}`}
-                aria-pressed={filter === 'nofolder'}
-                onClick={() => setFilter('nofolder')}
+                className={`nav-item ${filter === 'nofolder' && !sendsOpen ? 'active' : ''}`}
+                aria-pressed={filter === 'nofolder' && !sendsOpen}
+                onClick={() => showFilter('nofolder')}
               >
                 <FolderSimple size={16} />
                 <span>No folder</span>
                 <small>{folderCounts.none.toLocaleString()}</small>
+              </Button>
+            </nav>
+            <nav className="folder-nav" aria-label="Sends">
+              <Button
+                type="button"
+                variant="sidebar"
+                className={`nav-item ${sendsOpen ? 'active' : ''}`}
+                aria-pressed={sendsOpen}
+                onClick={() => setSendsOpen(true)}
+              >
+                <PaperPlaneTilt size={16} />
+                <span>Sends</span>
               </Button>
             </nav>
             <div className="sidebar-bottom">
@@ -823,206 +851,213 @@ function VaultWorkspace({
               </Button>
             </div>
           </aside>
-          <section className="item-list" aria-label={currentFilter.label}>
-            <ItemList
-              onFavorite={filter === 'trash' ? undefined : toggleFavorite}
-              favoritePending={favoritePending}
-              revealSelection={revealSelection}
-              onItemMenu={(item, position) => void showItemMenu(item, position)}
-              header={
-                <>
-                  <header className="workspace-list-toolbar">
-                    <InputGroup>
-                      <InputGroupAddon>
-                        <Search size={16} />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        ref={searchInput}
-                        aria-label="Search vault"
-                        placeholder="Search vault"
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                      />
-                      <InputGroupAddon align="inline-end">
-                        {!query && (
-                          <InputGroupButton
-                            size="sm"
-                            aria-label="Quick open (⌘K)"
-                            onClick={() => runCommand('search')}
-                          >
-                            <Kbd>⌘K</Kbd>
-                          </InputGroupButton>
-                        )}
-                        {query && (
-                          <InputGroupButton
-                            size="icon-xs"
-                            aria-label="Clear search"
-                            onClick={() => {
-                              setQuery('');
-                              searchInput.current?.focus();
-                            }}
-                          >
-                            <X size={14} />
-                          </InputGroupButton>
-                        )}
-                      </InputGroupAddon>
-                    </InputGroup>
-                  </header>
-                  <header className="list-heading">
-                    <h1>{query ? 'Search results' : currentFilter.label}</h1>
-                    <span>{visible.length.toLocaleString()}</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Sync vault"
-                          aria-busy={syncing}
-                          disabled={syncing}
-                          onClick={() => void sync()}
-                        >
-                          {syncing ? <Spinner /> : <RefreshCw size={14} />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Sync vault</TooltipContent>
-                    </Tooltip>
-                  </header>
-                  {currentListError && visible.length > 0 && (
-                    <Alert variant="destructive" className="workspace-list-error">
-                      <AlertCircle />
-                      <AlertDescription>{currentListError}</AlertDescription>
-                    </Alert>
-                  )}
-                </>
-              }
-              items={visible}
-              selectedId={selectionVisible ? selectedId : ''}
-              onSelect={(item) => void select(item)}
-              query={query}
-              onNew={() => runCommand('new')}
-              emptyLabel={currentFilter.empty}
-              emptyDescription={currentFilter.description}
-              loading={filter === 'trash' ? trashLoading : loading}
-              error={currentListError}
-            />
-            <footer className="list-footer">
-              <Button
-                ref={newButton}
-                type="button"
-                variant="ghost"
-                className="workspace-new"
-                onClick={() => runCommand('new')}
+          {sendsOpen ? (
+            <Sends />
+          ) : (
+            <>
+              <section className="item-list" aria-label={currentFilter.label}>
+                <ItemList
+                  onFavorite={filter === 'trash' ? undefined : toggleFavorite}
+                  favoritePending={favoritePending}
+                  revealSelection={revealSelection}
+                  onItemMenu={(item, position) => void showItemMenu(item, position)}
+                  header={
+                    <>
+                      <header className="workspace-list-toolbar">
+                        <InputGroup>
+                          <InputGroupAddon>
+                            <Search size={16} />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            ref={searchInput}
+                            aria-label="Search vault"
+                            placeholder="Search vault"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                          />
+                          <InputGroupAddon align="inline-end">
+                            {!query && (
+                              <InputGroupButton
+                                size="sm"
+                                aria-label="Quick open (⌘K)"
+                                onClick={() => runCommand('search')}
+                              >
+                                <Kbd>⌘K</Kbd>
+                              </InputGroupButton>
+                            )}
+                            {query && (
+                              <InputGroupButton
+                                size="icon-xs"
+                                aria-label="Clear search"
+                                onClick={() => {
+                                  setQuery('');
+                                  searchInput.current?.focus();
+                                }}
+                              >
+                                <X size={14} />
+                              </InputGroupButton>
+                            )}
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </header>
+                      <header className="list-heading">
+                        <h1>{query ? 'Search results' : currentFilter.label}</h1>
+                        <span>{visible.length.toLocaleString()}</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Sync vault"
+                              aria-busy={syncing}
+                              disabled={syncing}
+                              onClick={() => void sync()}
+                            >
+                              {syncing ? <Spinner /> : <RefreshCw size={14} />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Sync vault</TooltipContent>
+                        </Tooltip>
+                      </header>
+                      {currentListError && visible.length > 0 && (
+                        <Alert variant="destructive" className="workspace-list-error">
+                          <AlertCircle />
+                          <AlertDescription>{currentListError}</AlertDescription>
+                        </Alert>
+                      )}
+                    </>
+                  }
+                  items={visible}
+                  selectedId={selectionVisible ? selectedId : ''}
+                  onSelect={(item) => void select(item)}
+                  query={query}
+                  onNew={() => runCommand('new')}
+                  emptyLabel={currentFilter.empty}
+                  emptyDescription={currentFilter.description}
+                  loading={filter === 'trash' ? trashLoading : loading}
+                  error={currentListError}
+                />
+                <footer className="list-footer">
+                  <Button
+                    ref={newButton}
+                    type="button"
+                    variant="ghost"
+                    className="workspace-new"
+                    onClick={() => runCommand('new')}
+                  >
+                    <Plus size={16} />
+                    New login<Kbd>⌘N</Kbd>
+                  </Button>
+                </footer>
+              </section>
+              <section
+                className="detail-pane"
+                aria-label="Item details"
+                aria-busy={activeDetail === 'loading'}
+                onContextMenu={(event) => {
+                  if (!selected || !selectionVisible) return;
+                  const target = event.target as HTMLElement;
+                  if (target.closest('input, textarea, [contenteditable="true"]')) return;
+                  // Selected notes and URLs retain standard text Copy. Credentials
+                  // always use the timed clipboard API, including revealed passwords.
+                  if (!target.closest('[data-credential]') && window.getSelection()?.toString())
+                    return;
+                  event.preventDefault();
+                  void showItemMenu(selected, {
+                    x: Math.round(event.clientX),
+                    y: Math.round(event.clientY),
+                  });
+                }}
               >
-                <Plus size={16} />
-                New login<Kbd>⌘N</Kbd>
-              </Button>
-            </footer>
-          </section>
-          <section
-            className="detail-pane"
-            aria-label="Item details"
-            aria-busy={activeDetail === 'loading'}
-            onContextMenu={(event) => {
-              if (!selected || !selectionVisible) return;
-              const target = event.target as HTMLElement;
-              if (target.closest('input, textarea, [contenteditable="true"]')) return;
-              // Selected notes and URLs retain standard text Copy. Credentials
-              // always use the timed clipboard API, including revealed passwords.
-              if (!target.closest('[data-credential]') && window.getSelection()?.toString()) return;
-              event.preventDefault();
-              void showItemMenu(selected, {
-                x: Math.round(event.clientX),
-                y: Math.round(event.clientY),
-              });
-            }}
-          >
-            {selected && selectionVisible ? (
-              <Detail
-                key={selected.id}
-                item={selected}
-                onEdit={() => {
-                  if (!hasModal()) setModal('edit');
-                }}
-                onGone={() => {
-                  if (!alive.current) return;
-                  selectionVersion.current++;
-                  setSelection({ status: 'unselected' });
-                }}
-                onUpdated={(updated) => {
-                  if (!alive.current) return;
-                  setSelection((current) =>
-                    current.status === 'ready' && current.item.id === updated.id
-                      ? { status: 'ready', item: updated }
-                      : current,
-                  );
-                }}
-                notify={notify}
-              />
-            ) : (
-              <Empty className="workspace-detail-empty" role="status">
-                <EmptyHeader>
-                  <EmptyMedia>
-                    {activeDetail === 'loading' ? (
-                      <Spinner />
-                    ) : activeDetail === 'restricted' ? (
-                      <LockKeyhole size={24} />
-                    ) : activeDetail === 'error' ? (
-                      <AlertCircle size={24} />
-                    ) : (
-                      <Mark size={28} />
+                {selected && selectionVisible ? (
+                  <Detail
+                    key={selected.id}
+                    item={selected}
+                    onEdit={() => {
+                      if (!hasModal()) setModal('edit');
+                    }}
+                    onGone={() => {
+                      if (!alive.current) return;
+                      selectionVersion.current++;
+                      setSelection({ status: 'unselected' });
+                    }}
+                    onUpdated={(updated) => {
+                      if (!alive.current) return;
+                      setSelection((current) =>
+                        current.status === 'ready' && current.item.id === updated.id
+                          ? { status: 'ready', item: updated }
+                          : current,
+                      );
+                    }}
+                    notify={notify}
+                  />
+                ) : (
+                  <Empty className="workspace-detail-empty" role="status">
+                    <EmptyHeader>
+                      <EmptyMedia>
+                        {activeDetail === 'loading' ? (
+                          <Spinner />
+                        ) : activeDetail === 'restricted' ? (
+                          <LockKeyhole size={24} />
+                        ) : activeDetail === 'error' ? (
+                          <AlertCircle size={24} />
+                        ) : (
+                          <Mark size={28} />
+                        )}
+                      </EmptyMedia>
+                      <EmptyTitle>
+                        {activeDetail === 'loading'
+                          ? 'Loading item…'
+                          : activeDetail === 'restricted'
+                            ? 'Open this item in Bitwarden'
+                            : activeDetail === 'error'
+                              ? 'Could not load item'
+                              : query && !visible.length
+                                ? 'No matching items'
+                                : 'Select an item'}
+                      </EmptyTitle>
+                      <EmptyDescription>
+                        {activeDetail === 'loading'
+                          ? 'Reading item details.'
+                          : activeDetail === 'restricted'
+                            ? 'Shared and protected items are available in the official Bitwarden client.'
+                            : activeDetail === 'error'
+                              ? 'Could not load this item. Try again.'
+                              : query && !visible.length
+                                ? 'Change or clear your search to see more items.'
+                                : 'Choose an item to view its details.'}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    {activeDetail === 'error' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const item = visible.find((entry) => entry.id === selectedId);
+                          if (item) void select(item);
+                        }}
+                      >
+                        Try again
+                      </Button>
                     )}
-                  </EmptyMedia>
-                  <EmptyTitle>
-                    {activeDetail === 'loading'
-                      ? 'Loading item…'
-                      : activeDetail === 'restricted'
-                        ? 'Open this item in Bitwarden'
-                        : activeDetail === 'error'
-                          ? 'Could not load item'
-                          : query && !visible.length
-                            ? 'No matching items'
-                            : 'Select an item'}
-                  </EmptyTitle>
-                  <EmptyDescription>
-                    {activeDetail === 'loading'
-                      ? 'Reading item details.'
-                      : activeDetail === 'restricted'
-                        ? 'Shared and protected items are available in the official Bitwarden client.'
-                        : activeDetail === 'error'
-                          ? 'Could not load this item. Try again.'
-                          : query && !visible.length
-                            ? 'Change or clear your search to see more items.'
-                            : 'Choose an item to view its details.'}
-                  </EmptyDescription>
-                </EmptyHeader>
-                {activeDetail === 'error' && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const item = visible.find((entry) => entry.id === selectedId);
-                      if (item) void select(item);
-                    }}
-                  >
-                    Try again
-                  </Button>
+                    {query && !visible.length && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setQuery('');
+                          searchInput.current?.focus();
+                        }}
+                      >
+                        Clear search
+                      </Button>
+                    )}
+                  </Empty>
                 )}
-                {query && !visible.length && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setQuery('');
-                      searchInput.current?.focus();
-                    }}
-                  >
-                    Clear search
-                  </Button>
-                )}
-              </Empty>
-            )}
-          </section>
+              </section>
+            </>
+          )}
         </main>
         {modal === 'search' && (
           <QuickOpen
@@ -1034,7 +1069,7 @@ function VaultWorkspace({
               if (!alive.current) return;
               setModal(null);
               setQuery('');
-              setFilter('all');
+              showFilter('all');
               setRevealSelection((request) => request + 1);
               if (item.id !== selectedId || selection.status === 'error') void select(item);
             }}
@@ -1071,7 +1106,7 @@ function VaultWorkspace({
                 { id, name, username, website, type, favorite, hasPasskey, restricted, folderId },
               ]);
               setQuery('');
-              setFilter('all');
+              showFilter('all');
               setSelection({ status: 'ready', item });
             }}
             notify={notify}

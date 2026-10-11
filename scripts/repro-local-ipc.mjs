@@ -34,7 +34,8 @@ if (process.env.STRONGROOM_AUTOFILL_DIR)
 
 for (const channel of channels) {
   const config = JSON.parse(await readFile(channel.file, 'utf8'));
-  const socketPath = config.socketPath ?? join(process.env.STRONGROOM_AUTOFILL_DIR, 'autofill.sock');
+  const socketPath =
+    config.socketPath ?? join(process.env.STRONGROOM_AUTOFILL_DIR, 'autofill.sock');
   const result = await new Promise((resolve) => {
     const socket = createConnection(socketPath);
     socket.setTimeout(3000, () => socket.destroy(new Error('timeout')));

@@ -11,6 +11,7 @@ import {
   LockKey,
   PaintBrush,
   Heartbeat,
+  ArrowsLeftRight,
 } from '@phosphor-icons/react';
 import {
   lockTimeoutMinutes,
@@ -23,6 +24,7 @@ import {
 } from '@strongroom/shared/types';
 import { useWebsiteIcons } from './WebsiteIcons';
 import { HealthSection } from './HealthSection';
+import { ImportExportSection } from './ImportExportSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -69,6 +71,12 @@ const sections = [
     label: 'Vault health',
     icon: Heartbeat,
     description: 'Find reused, weak and exposed passwords.',
+  },
+  {
+    id: 'transfer',
+    label: 'Import and export',
+    icon: ArrowsLeftRight,
+    description: 'Bring in logins from another app or save a copy of your vault.',
   },
   {
     id: 'about',
@@ -453,8 +461,8 @@ export function Settings({
                 ))}
               </div>
               <p className="settings-caption">
-                Install the extension in your browser, then open it to connect. Keep Strongroom running
-                for autofill. The connection above updates automatically.
+                Install the extension in your browser, then open it to connect. Keep Strongroom
+                running for autofill. The connection above updates automatically.
               </p>
               <details className="settings-caption">
                 <summary>Developer installation</summary>
@@ -462,8 +470,8 @@ export function Settings({
                   <p>
                     For Chrome, Aside and other Chromium browsers: open the extension folder, enable
                     Developer mode on your browser’s extensions page, then choose Load unpacked and
-                    select that folder. After updating Strongroom, reload the extension and refresh open
-                    website tabs.
+                    select that folder. After updating Strongroom, reload the extension and refresh
+                    open website tabs.
                   </p>
                   <Button
                     type="button"
@@ -555,6 +563,7 @@ export function Settings({
             </section>
           )}
           {section === 'health' && <HealthSection />}
+          {section === 'transfer' && <ImportExportSection />}
           {section === 'about' && (
             <section className="task-settings-section">
               <h3>Your vault</h3>

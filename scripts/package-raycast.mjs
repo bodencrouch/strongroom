@@ -28,7 +28,10 @@ if (existsSync(resolve(source, 'metadata')))
 for (const file of ['protocol.ts', 'types.ts'])
   cpSync(resolve(root, 'packages/shared/src', file), resolve(output, 'src', file));
 const bridge = resolve(output, 'src/bridge.ts');
-writeFileSync(bridge, readFileSync(bridge, 'utf8').replace('@strongroom/shared/protocol', './protocol'));
+writeFileSync(
+  bridge,
+  readFileSync(bridge, 'utf8').replace('@strongroom/shared/protocol', './protocol'),
+);
 
 const manifest = readJson(resolve(source, 'package.json'));
 delete manifest.dependencies['@strongroom/shared'];

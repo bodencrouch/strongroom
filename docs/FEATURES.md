@@ -5,17 +5,17 @@ Where each paid Bitwarden feature lives, and what Strongroom does about it.
 **Client** means the feature is computed from your own vault data on your machine. Strongroom provides it fully.
 **Server** means the Bitwarden server decides whether your account may use it. Strongroom sends the request through `bw` and reports the answer. It does not fake an entitlement, and it does not change the installed Bitwarden apps. Against a self-hosted server such as Vaultwarden, where these limits are off, they work without any change.
 
-| Feature                        | Lives on                           | Strongroom                                                                        |
+| Feature                        | Lives on                           | Strongroom                                                                  |
 | ------------------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
-| Authenticator codes (TOTP)     | Client                             | Done: desktop item view, browser popup and `strongroom totp`                      |
+| Authenticator codes (TOTP)     | Client                             | Done: desktop item view, browser popup and `strongroom totp`                |
 | Steam Guard codes              | Client                             | Done, same module                                                           |
-| Reused password report         | Client                             | Done: Settings, Vault health, and `strongroom health`                             |
+| Reused password report         | Client                             | Done: Settings, Vault health, and `strongroom health`                       |
 | Weak password report           | Client                             | Done: same places                                                           |
 | Unsecured website report       | Client                             | Done: same places                                                           |
-| Exposed password report        | Client plus a public leak lookup   | Done, opt-in: Settings switch and `strongroom health --breaches`                  |
-| Inactive two-step report       | Client plus a public list of sites | Done, opt-in: `strongroom health --inactive-2fa`                                  |
-| File attachments               | Server                             | Wired: `strongroom attach`. Works where the account or server allows it           |
-| File Sends                     | Server                             | Wired: `strongroom send`. Works where the account or server allows it             |
+| Exposed password report        | Client plus a public leak lookup   | Done, opt-in: Settings switch and `strongroom health --breaches`            |
+| Inactive two-step report       | Client plus a public list of sites | Done, opt-in: `strongroom health --inactive-2fa`                            |
+| File attachments               | Server                             | Wired: `strongroom attach`. Works where the account or server allows it     |
+| File Sends                     | Server                             | Wired: `strongroom send`. Works where the account or server allows it       |
 | Emergency access               | Server                             | Not built. See below                                                        |
 | YubiKey and Duo two-step login | Server                             | Nothing to build: set on the account, and sign-in already asks for the code |
 | Priority support               | Bitwarden                          | Not applicable                                                              |

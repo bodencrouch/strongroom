@@ -510,6 +510,7 @@ export function Editor({
                       <PasswordGenerator
                         disabled={busy}
                         onUse={(password) => loginField('password', password)}
+                        onUseUsername={(username) => loginField('username', username)}
                       />
                     </div>
                     <InputGroup>

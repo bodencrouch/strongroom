@@ -3,7 +3,13 @@ export const MAX_BROWSER_MESSAGE_BYTES = 900_000;
 
 export type WindowMaterial = 'glass' | 'vibrancy' | 'solid';
 export type WindowCommand = 'search' | 'new' | 'settings';
-export type NativeConfirmation = 'discard' | 'trash' | 'deleteFolder' | 'deleteAttachment';
+export type NativeConfirmation =
+  | 'discard'
+  | 'trash'
+  | 'deleteFolder'
+  | 'deleteAttachment'
+  | 'deleteSend'
+  | 'exportPlain';
 export type ItemMenuAction = 'copyUsername' | 'copyPassword' | 'edit' | 'trash' | 'restore';
 export type MenuPosition = { x: number; y: number };
 export const windowColorTokens = [
@@ -127,6 +133,72 @@ export interface Folder {
   id: string;
   name: string;
 }
+
+/** A Bitwarden Send as listed. The text, password and link never reach the window. */
+export interface SendSummary {
+  id: string;
+  name: string;
+  /** 0 is a text Send, 1 is a file Send. */
+  type: 0 | 1;
+  /** The file name of a file Send. */
+  fileName: string | null;
+  deletionDate: string | null;
+  expirationDate: string | null;
+  maxAccessCount: number | null;
+  accessCount: number;
+  disabled: boolean;
+  passwordSet: boolean;
+}
+
+/** A new Send. File Sends pick their file in a native dialog. */
+export type SendDraft = {
+  name: string;
+  notes: string;
+  /** Days until Bitwarden deletes the Send. */
+  deleteInDays: number;
+  /** Days until the Send stops working; null means never. */
+  expireInDays: number | null;
+  maxAccessCount: number | null;
+  password: string;
+  disabled: boolean;
+  hideEmail: boolean;
+} & ({ type: 'text'; text: string; hidden: boolean } | { type: 'file' });
+
+export type ExportFormat = 'csv' | 'json' | 'encrypted_json';
+
+/** Formats `bw import` accepts, read from the CLI's own list. */
+export const importFormats = [
+  ['bitwardenjson', 'Bitwarden (json)'],
+  ['bitwardencsv', 'Bitwarden (csv)'],
+  ['chromecsv', 'Chrome'],
+  ['firefoxcsv', 'Firefox (csv)'],
+  ['safaricsv', 'Safari and macOS (csv)'],
+  ['edgecsv', 'Edge'],
+  ['bravecsv', 'Brave'],
+  ['operacsv', 'Opera'],
+  ['vivaldicsv', 'Vivaldi'],
+  ['arccsv', 'Arc'],
+  ['lastpasscsv', 'LastPass'],
+  ['1password1pux', '1Password (1pux/json)'],
+  ['1password1pif', '1Password (1pif)'],
+  ['1passwordwincsv', '1Password 6 and 7 Windows (csv)'],
+  ['1passwordmaccsv', '1Password 6 and 7 Mac (csv)'],
+  ['dashlanecsv', 'Dashlane (csv)'],
+  ['dashlanejson', 'Dashlane (json)'],
+  ['keepass2xml', 'KeePass 2 (xml)'],
+  ['keepassxcsv', 'KeePassX (csv)'],
+  ['keepercsv', 'Keeper (csv)'],
+  ['keeperjson', 'Keeper (json)'],
+  ['enpasscsv', 'Enpass (csv)'],
+  ['enpassjson', 'Enpass (json)'],
+  ['nordpasscsv', 'Nordpass (csv)'],
+  ['protonpass', 'Proton Pass (zip/json)'],
+  ['roboformcsv', 'RoboForm (csv)'],
+  ['remembearcsv', 'RememBear (csv)'],
+  ['passboltcsv', 'Passbolt (csv)'],
+  ['zohovaultcsv', 'Zoho Vault (csv)'],
+] as const;
+export type ImportFormat = (typeof importFormats)[number][0];
 
 /** A read-only field on a card, identity or SSH key. */
 export interface ExtraField {
@@ -358,6 +430,13 @@ export interface StrongroomApi {
   deleteAttachment(id: string, attachmentId: string): Promise<Result<ItemDetail>>;
   addAttachment(id: string): Promise<Result<ItemDetail | null>>;
   generate(options: PasswordOptions): Promise<Result<string>>;
+  sends(): Promise<Result<SendSummary[]>>;
+  createSend(draft: SendDraft): Promise<Result<SendSummary[] | null>>;
+  deleteSend(id: string): Promise<Result<SendSummary[]>>;
+  removeSendPassword(id: string): Promise<Result<SendSummary[]>>;
+  copySendLink(id: string): Promise<Result<void>>;
+  exportVault(format: ExportFormat): Promise<Result<boolean>>;
+  importVault(format: ImportFormat): Promise<Result<VaultState | null>>;
   browserSetup(): Promise<Result<BrowserSetup>>;
   connectBrowser(browser: Browser): Promise<Result<void>>;
   browserConnection(): Promise<Result<BrowserConnection>>;

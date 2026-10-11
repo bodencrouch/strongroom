@@ -32,7 +32,10 @@ import type { DesktopRequest } from '@strongroom/shared/protocol';
 process.umask(0o077);
 // Keep the existing data directory and OS encryption identity across the rename.
 app.setName('Strongroom');
-app.setPath('userData', process.env.STRONGROOM_DATA_DIR ?? join(app.getPath('appData'), 'Strongroom'));
+app.setPath(
+  'userData',
+  process.env.STRONGROOM_DATA_DIR ?? join(app.getPath('appData'), 'Strongroom'),
+);
 if (!app.requestSingleInstanceLock()) app.quit();
 
 let window: BrowserWindow;
@@ -303,6 +306,10 @@ async function handleRequest(request: DesktopRequest): Promise<unknown> {
       return vault.health(request.breaches);
     case 'generate':
       return generatePassword(request.options);
+    case 'sends':
+      return vault.sends();
+    case 'copySendLink':
+      return lifecycle.copySendLink(request.id);
     case 'browserSetup':
       return browserSetup(macAutoFill);
     case 'connectBrowser':
@@ -347,6 +354,11 @@ async function mutateVault(
         | 'downloadAttachment'
         | 'deleteAttachment'
         | 'addAttachment'
+        | 'createSend'
+        | 'deleteSend'
+        | 'removeSendPassword'
+        | 'exportVault'
+        | 'importVault'
         | 'biometricUnlock'
         | 'setBiometrics';
     }
@@ -396,6 +408,19 @@ async function mutateVault(
         return await vault.deleteAttachment(request.id, request.attachmentId);
       case 'addAttachment':
         return await vault.addAttachment(request.id, () => nativeInteractions.chooseOpenPath());
+      case 'createSend':
+        return await vault.createSend(request.draft, () => nativeInteractions.chooseOpenPath());
+      case 'deleteSend':
+        return await vault.deleteSend(request.id);
+      case 'removeSendPassword':
+        return await vault.removeSendPassword(request.id);
+      case 'exportVault':
+        return await vault.exportVault(request.format, {
+          confirmPlain: () => nativeInteractions.confirm('exportPlain'),
+          pick: (name) => nativeInteractions.chooseSavePath(name),
+        });
+      case 'importVault':
+        return await vault.importVault(request.format, () => nativeInteractions.chooseOpenPath());
     }
   } finally {
     busy = false;
