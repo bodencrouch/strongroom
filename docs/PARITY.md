@@ -6,24 +6,24 @@ Status words: **Done** works in Strongroom. **Partial** works with limits. **Pla
 
 ## Vault items
 
-| Item or feature                                       | Status            | Notes                                                                    |
-| ----------------------------------------------------- | ----------------- | ------------------------------------------------------------------------ |
-| Logins: view, create, edit, trash, restore            | Done              |                                                                          |
-| Secure notes: view, create, edit                      | Done              |                                                                          |
-| Favorites                                             | Done              |                                                                          |
-| Cards: view and copy                                  | Done              | Editing is planned                                                       |
-| Identities: view and copy                             | Done              | Editing is planned                                                       |
-| SSH keys: view and copy                               | Done              | Editing is planned                                                       |
-| Passkeys                                              | Partial           | Used through macOS AutoFill. Editing a passkey item is left to Bitwarden |
-| One-time codes (TOTP)                                 | Done              | Desktop, browser popup and command line                                  |
-| URI match rules                                       | Done              |                                                                          |
-| Folders: view, filter, assign, create, rename, delete | Done              | Nested names such as `A/B` show as flat names, not a tree                |
-| Custom fields                                         | Planned           |                                                                          |
-| Password history                                      | Planned           |                                                                          |
-| Attachments: add                                      | Partial           | `strongroom attach`. The server decides if the account may                     |
-| Attachments: view, download, delete                   | Planned           |                                                                          |
-| Items with master password re-prompt                  | Not possible here | Shown as restricted. Re-prompt belongs in the official client            |
-| Organization and collection items                     | Not possible here | Shown as restricted. Needs organization key handling                     |
+| Item or feature                                       | Status            | Notes                                                                                       |
+| ----------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| Logins: view, create, edit, trash, restore            | Done              |                                                                                             |
+| Secure notes: view, create, edit                      | Done              |                                                                                             |
+| Favorites                                             | Done              |                                                                                             |
+| Cards: view and copy                                  | Done              | Editing is planned                                                                          |
+| Identities: view and copy                             | Done              | Editing is planned                                                                          |
+| SSH keys: view and copy                               | Done              | Editing is planned                                                                          |
+| Passkeys                                              | Partial           | Used through macOS AutoFill. Editing a passkey item is left to Bitwarden                    |
+| One-time codes (TOTP)                                 | Done              | Desktop, browser popup and command line                                                     |
+| URI match rules                                       | Done              |                                                                                             |
+| Folders: view, filter, assign, create, rename, delete | Done              | Nested names such as `A/B` show as flat names, not a tree                                   |
+| Custom fields: view and copy                          | Done              | Editing is planned                                                                          |
+| Password history: view and copy                       | Done              |                                                                                             |
+| Attachments: add, download, delete                    | Done              | Desktop app. The server decides if the account may add files. Not run against a real server |
+| Attachments: list                                     | Done              | Shown in the item detail                                                                    |
+| Items with master password re-prompt                  | Not possible here | Shown as restricted. Re-prompt belongs in the official client                               |
+| Organization and collection items                     | Not possible here | Shown as restricted. Needs organization key handling                                        |
 
 ## Sending and sharing
 

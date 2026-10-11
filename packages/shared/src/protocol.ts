@@ -34,6 +34,7 @@ const challengeAnswer = z.union([
   z.object({ cancel: z.literal(true) }).strict(),
 ]);
 const id = z.string().uuid();
+const attachmentId = z.string().min(1).max(200);
 export const browserSaveResultSchema = z.object({ id });
 const folderName = z.string().trim().min(1).max(500);
 const draftBase = {
@@ -86,7 +87,10 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('state') }).strict(),
   z.object({ type: z.literal('appearance') }).strict(),
   z
-    .object({ type: z.literal('confirm'), action: z.enum(['discard', 'trash', 'deleteFolder']) })
+    .object({
+      type: z.literal('confirm'),
+      action: z.enum(['discard', 'trash', 'deleteFolder', 'deleteAttachment']),
+    })
     .strict(),
   z
     .object({
@@ -143,6 +147,15 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ type: z.literal('copyExtra'), id, index: z.number().int().min(0).max(63) }).strict(),
+  z
+    .object({ type: z.literal('copyCustomField'), id, index: z.number().int().min(0).max(255) })
+    .strict(),
+  z
+    .object({ type: z.literal('copyHistory'), id, index: z.number().int().min(0).max(255) })
+    .strict(),
+  z.object({ type: z.literal('downloadAttachment'), id, attachmentId }).strict(),
+  z.object({ type: z.literal('deleteAttachment'), id, attachmentId }).strict(),
+  z.object({ type: z.literal('addAttachment'), id }).strict(),
   z.object({ type: z.literal('generate'), options: passwordOptionsSchema }).strict(),
   z.object({ type: z.literal('browserSetup') }).strict(),
   z

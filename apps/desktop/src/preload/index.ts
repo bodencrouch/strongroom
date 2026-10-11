@@ -39,6 +39,12 @@ const api: StrongroomApi = {
   restore: (id) => request({ type: 'restore', id }),
   copy: (id, field) => request({ type: 'copy', id, field }),
   copyExtra: (id, index) => request({ type: 'copyExtra', id, index }),
+  copyCustomField: (id, index) => request({ type: 'copyCustomField', id, index }),
+  copyHistory: (id, index) => request({ type: 'copyHistory', id, index }),
+  downloadAttachment: (id, attachmentId) =>
+    request({ type: 'downloadAttachment', id, attachmentId }),
+  deleteAttachment: (id, attachmentId) => request({ type: 'deleteAttachment', id, attachmentId }),
+  addAttachment: (id) => request({ type: 'addAttachment', id }),
   generate: (options) => request({ type: 'generate', options }),
   browserSetup: () => request({ type: 'browserSetup' }),
   connectBrowser: (browser) => request({ type: 'connectBrowser', browser }),

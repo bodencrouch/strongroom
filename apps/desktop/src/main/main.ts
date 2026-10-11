@@ -318,6 +318,10 @@ async function handleRequest(request: DesktopRequest): Promise<unknown> {
       return lifecycle.copy(request.id, request.field);
     case 'copyExtra':
       return lifecycle.copyExtra(request.id, request.index);
+    case 'copyCustomField':
+      return lifecycle.copyCustomField(request.id, request.index);
+    case 'copyHistory':
+      return lifecycle.copyHistory(request.id, request.index);
     default:
       return mutateVault(request);
   }
@@ -340,6 +344,9 @@ async function mutateVault(
         | 'createFolder'
         | 'renameFolder'
         | 'deleteFolder'
+        | 'downloadAttachment'
+        | 'deleteAttachment'
+        | 'addAttachment'
         | 'biometricUnlock'
         | 'setBiometrics';
     }
@@ -381,6 +388,14 @@ async function mutateVault(
         return await vault.renameFolder(request.id, request.name);
       case 'deleteFolder':
         return await vault.deleteFolder(request.id);
+      case 'downloadAttachment':
+        return await vault.downloadAttachment(request.id, request.attachmentId, (name) =>
+          nativeInteractions.chooseSavePath(name),
+        );
+      case 'deleteAttachment':
+        return await vault.deleteAttachment(request.id, request.attachmentId);
+      case 'addAttachment':
+        return await vault.addAttachment(request.id, () => nativeInteractions.chooseOpenPath());
     }
   } finally {
     busy = false;

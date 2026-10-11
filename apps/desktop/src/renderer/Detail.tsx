@@ -15,6 +15,8 @@ import type { ItemDetail } from '@strongroom/shared/types';
 import { ItemIcon, displayWebsite, typeName } from './items';
 import { TotpRow } from './TotpRow';
 import { ExtraFields } from './ExtraFields';
+import { PasswordHistory } from './PasswordHistory';
+import { Attachments } from './Attachments';
 import type { Notifier } from './Toasts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,11 +29,13 @@ export function Detail({
   item,
   onEdit,
   onGone,
+  onUpdated,
   notify,
 }: {
   item: ItemDetail;
   onEdit: () => void;
   onGone: () => void;
+  onUpdated: (item: ItemDetail) => void;
   notify: Notifier;
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -308,12 +312,29 @@ export function Detail({
         {item.extra.length > 0 && (
           <ExtraFields key={item.id} itemId={item.id} fields={item.extra} />
         )}
+        {item.customFields.length > 0 && (
+          <ExtraFields
+            key={`custom-${item.id}`}
+            itemId={item.id}
+            fields={item.customFields}
+            label="Custom fields"
+            kind="custom"
+          />
+        )}
+        {item.type === 1 && item.passwordHistory.length > 0 && (
+          <PasswordHistory
+            key={`history-${item.id}`}
+            itemId={item.id}
+            entries={item.passwordHistory}
+          />
+        )}
         {item.notes && (
           <section className="notes task-notes-display rounded-lg border border-border bg-card">
             <h3 className="text-xs text-muted-foreground">Notes</h3>
             <p className="text-sm text-foreground leading-relaxed">{item.notes}</p>
           </section>
         )}
+        <Attachments key={`files-${item.id}`} item={item} onUpdated={onUpdated} />
         {item.type !== 1 && item.type !== 2 && (
           <Alert>
             <AlertTitle>Read-only in Strongroom</AlertTitle>

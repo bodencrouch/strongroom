@@ -31,6 +31,7 @@ import type {
   BrowserVaultPage,
   CaptureOffer,
   ChallengeAnswer,
+  AttachmentInfo,
   ExtraField,
   Folder,
   HealthSummary,
@@ -39,6 +40,7 @@ import type {
   LoginChallenge,
   ItemDraft,
   LoginInput,
+  PasswordHistoryEntry,
   PasswordOptions,
   TwoStepMethod,
   VaultState,
@@ -59,6 +61,9 @@ export interface Cipher {
   card?: Record<string, string | null> | null;
   identity?: Record<string, string | null> | null;
   sshKey?: Record<string, string | null> | null;
+  fields?: CipherField[] | null;
+  passwordHistory?: { password?: string | null; lastUsedDate?: string | null }[] | null;
+  attachments?: CipherAttachment[] | null;
   login?: {
     username?: string | null;
     password?: string | null;
@@ -69,6 +74,27 @@ export interface Cipher {
   };
   [key: string]: unknown;
 }
+
+export interface CipherField {
+  name?: string | null;
+  value?: string | null;
+  type?: number;
+  linkedId?: number | null;
+}
+
+export interface CipherAttachment {
+  id?: string | null;
+  fileName?: string | null;
+  sizeName?: string | null;
+  size?: string | null;
+  url?: string | null;
+}
+
+/** Picks a file path with a native dialog; null when the user cancels. */
+export type PathPicker = (suggestedName: string) => Promise<string | null>;
+
+const ATTACHMENT_REFUSED =
+  'Bitwarden did not accept the attachment. Your plan or server may not allow it.';
 
 /** The CLI's numeric identifiers for the two-step methods it can complete. */
 const METHOD_FLAGS: Record<TwoStepMethod, string> = {
@@ -605,6 +631,9 @@ export class Vault extends EventEmitter {
       })),
       notes: cipher.notes ?? '',
       extra: extraFields(cipher),
+      customFields: customFieldRows(cipher),
+      passwordHistory: historyRows(cipher),
+      attachments: attachmentRows(cipher),
       revisionDate: cipher.revisionDate ?? null,
       createdDate: cipher.creationDate ?? null,
       editable: isEditable(cipher) && !cipher.deletedDate,
@@ -618,6 +647,99 @@ export class Vault extends EventEmitter {
     const row = extraFields(this.item(id))[index];
     if (!row) throw new UserError('That field is no longer available.');
     return row.value;
+  }
+
+  /** One value from an item's custom fields, for copying. */
+  customFieldValue(id: string, index: number): string {
+    const row = customFieldRows(this.item(id))[index];
+    if (!row || row.copyable === false) throw new UserError('That field is no longer available.');
+    return row.value;
+  }
+
+  /** One earlier password, for copying. Index follows the newest-first order of the detail. */
+  historyValue(id: string, index: number): string {
+    const row = historyRows(this.item(id))[index];
+    if (!row) throw new UserError('That password is no longer available.');
+    return row.password;
+  }
+
+  /** Saves an attachment to a path the user picks. Resolves false when they cancel. */
+  async downloadAttachment(id: string, attachmentId: string, pick: PathPicker) {
+    const cipher = this.attachable(id);
+    const attachment = (cipher.attachments ?? []).find((entry) => entry.id === attachmentId);
+    if (!attachment?.id) throw new UserError('That attachment is no longer available.');
+    const generation = this.generation;
+    const path = await pick(attachment.fileName || 'attachment');
+    this.assertGeneration(generation);
+    this.requireUnlocked();
+    if (!path) return false;
+    await this.attachmentCommand(
+      generation,
+      ['get', 'attachment', attachment.id, '--itemid', id, '--output', path],
+      'Bitwarden could not download the attachment.',
+    );
+    return true;
+  }
+
+  async deleteAttachment(id: string, attachmentId: string) {
+    const cipher = this.attachable(id);
+    if (!(cipher.attachments ?? []).some((entry) => entry.id === attachmentId))
+      throw new UserError('That attachment is no longer available.');
+    const generation = this.generation;
+    await this.attachmentCommand(
+      generation,
+      ['delete', 'attachment', attachmentId, '--itemid', id],
+      'Bitwarden could not delete the attachment.',
+    );
+    return this.refreshItem(id, generation);
+  }
+
+  /** Attaches a file the user picks. Resolves null when they cancel. */
+  async addAttachment(id: string, pick: () => Promise<string | null>) {
+    this.attachable(id);
+    const generation = this.generation;
+    const path = await pick();
+    this.assertGeneration(generation);
+    this.requireUnlocked();
+    if (!path) return null;
+    await this.attachmentCommand(
+      generation,
+      ['create', 'attachment', '--file', path, '--itemid', id],
+      ATTACHMENT_REFUSED,
+    );
+    return this.refreshItem(id, generation);
+  }
+
+  private attachable(id: string) {
+    const cipher = this.item(id);
+    if (isRestricted(cipher) || cipher.deletedDate)
+      throw new UserError('Use the official Bitwarden client for this item.');
+    return cipher;
+  }
+
+  /** Runs an attachment command. The CLI's own output and errors never leave this method. */
+  private async attachmentCommand(generation: number, args: string[], failure: string) {
+    try {
+      await this.cli.run(args, { session: this.session });
+    } catch {
+      this.assertGeneration(generation);
+      throw new UserError(failure);
+    }
+    this.assertGeneration(generation);
+  }
+
+  private async refreshItem(id: string, generation: number) {
+    let saved: Cipher;
+    try {
+      saved = JSON.parse(await this.cli.run(['get', 'item', id], { session: this.session }));
+    } catch {
+      this.assertGeneration(generation);
+      throw new UserError('Done, but the item could not be reloaded. Sync your vault.');
+    }
+    this.assertGeneration(generation);
+    this.ciphers.set(saved.id, cacheFields(saved));
+    this.publish();
+    return this.detail(saved.id);
   }
 
   /**
@@ -1271,6 +1393,9 @@ function cacheFields(cipher: Cipher): Cipher {
     card: isRestricted(cipher) ? null : cipher.card,
     identity: isRestricted(cipher) ? null : cipher.identity,
     sshKey: isRestricted(cipher) ? null : cipher.sshKey,
+    fields: isRestricted(cipher) ? null : cipher.fields,
+    passwordHistory: isRestricted(cipher) ? null : cipher.passwordHistory,
+    attachments: isRestricted(cipher) ? null : cipher.attachments,
     login: {
       username: isRestricted(cipher) ? null : cipher.login?.username,
       password: isRestricted(cipher) ? null : cipher.login?.password,
@@ -1331,6 +1456,76 @@ function extraFields(cipher: Cipher): ExtraField[] {
     add('Private key', k.privateKey, true);
   }
   return rows;
+}
+/** Labels for the fields a linked custom field can point at. */
+const LINKED_LABELS: Record<number, string> = {
+  100: 'Username',
+  101: 'Password',
+  300: 'Cardholder name',
+  301: 'Expiration month',
+  302: 'Expiration year',
+  303: 'Security code',
+  304: 'Brand',
+  305: 'Number',
+  400: 'Title',
+  401: 'Middle name',
+  402: 'Address 1',
+  403: 'Address 2',
+  404: 'Address 3',
+  405: 'City / Town',
+  406: 'State / Province',
+  407: 'Zip / Postal code',
+  408: 'Country',
+  409: 'Company',
+  410: 'Email',
+  411: 'Phone',
+  412: 'Social security number',
+  413: 'Username',
+  414: 'Passport number',
+  415: 'License number',
+  416: 'First name',
+  417: 'Last name',
+  418: 'Full name',
+};
+
+/** Custom fields in stored order. Index here is the index copy uses. */
+function customFieldRows(cipher: Cipher): ExtraField[] {
+  if (isRestricted(cipher)) return [];
+  return (cipher.fields ?? []).map((field): ExtraField => {
+    const label = field.name?.trim() || 'Field';
+    const value = field.value ?? '';
+    if (field.type === 1) return { label, value, secret: true };
+    if (field.type === 2) return { label, value: value === 'true' ? 'Yes' : 'No', secret: false };
+    if (field.type === 3) {
+      const linked = field.linkedId == null ? undefined : LINKED_LABELS[field.linkedId];
+      return { label, value: linked ?? '', secret: false, copyable: false };
+    }
+    return { label, value, secret: false };
+  });
+}
+
+/** Earlier passwords, newest first. Entries without a usable date go last. */
+function historyRows(cipher: Cipher): PasswordHistoryEntry[] {
+  if (isRestricted(cipher)) return [];
+  const time = (entry: PasswordHistoryEntry) => {
+    const value = Date.parse(entry.lastUsedDate ?? '');
+    return Number.isNaN(value) ? -Infinity : value;
+  };
+  return (cipher.passwordHistory ?? [])
+    .filter((entry) => entry.password)
+    .map((entry) => ({ password: entry.password!, lastUsedDate: entry.lastUsedDate ?? null }))
+    .sort((a, b) => time(b) - time(a));
+}
+
+function attachmentRows(cipher: Cipher): AttachmentInfo[] {
+  if (isRestricted(cipher)) return [];
+  return (cipher.attachments ?? [])
+    .filter((entry) => entry.id)
+    .map((entry) => ({
+      id: entry.id!,
+      fileName: entry.fileName || 'Attachment',
+      size: entry.sizeName ?? '',
+    }));
 }
 /** The passkeys on an item that this Mac can sign with. */
 function passkeysOf(cipher: Cipher): Fido2Credential[] {

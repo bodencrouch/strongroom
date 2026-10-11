@@ -129,6 +129,14 @@ export class DesktopLifecycle {
     return this.copyValue((vault) => vault.extraValue(id, index));
   }
 
+  copyCustomField(id: string, index: number) {
+    return this.copyValue((vault) => vault.customFieldValue(id, index));
+  }
+
+  copyHistory(id: string, index: number) {
+    return this.copyValue((vault) => vault.historyValue(id, index));
+  }
+
   private copyValue(read: (vault: Vault) => string) {
     const epoch = this.epoch;
     this.clipboardQueue = this.clipboardQueue

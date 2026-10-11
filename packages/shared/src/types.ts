@@ -3,7 +3,7 @@ export const MAX_BROWSER_MESSAGE_BYTES = 900_000;
 
 export type WindowMaterial = 'glass' | 'vibrancy' | 'solid';
 export type WindowCommand = 'search' | 'new' | 'settings';
-export type NativeConfirmation = 'discard' | 'trash' | 'deleteFolder';
+export type NativeConfirmation = 'discard' | 'trash' | 'deleteFolder' | 'deleteAttachment';
 export type ItemMenuAction = 'copyUsername' | 'copyPassword' | 'edit' | 'trash' | 'restore';
 export type MenuPosition = { x: number; y: number };
 export const windowColorTokens = [
@@ -133,11 +133,30 @@ export interface ExtraField {
   label: string;
   value: string;
   secret: boolean;
+  /** False for rows that only describe something, such as a linked field. */
+  copyable?: boolean;
+}
+
+/** One earlier password on a login, newest first. */
+export interface PasswordHistoryEntry {
+  password: string;
+  lastUsedDate: string | null;
+}
+
+/** A file attached to an item. */
+export interface AttachmentInfo {
+  id: string;
+  fileName: string;
+  size: string;
 }
 
 export interface ItemDetail extends ItemSummary {
   password: string;
   extra: ExtraField[];
+  /** The item's custom fields, in the order Bitwarden stores them. */
+  customFields: ExtraField[];
+  passwordHistory: PasswordHistoryEntry[];
+  attachments: AttachmentInfo[];
   uris: { sourceIndex: number; uri: string | null; match: number | null }[];
   notes: string;
   revisionDate: string | null;
@@ -265,6 +284,11 @@ export interface StrongroomApi {
   restore(id: string): Promise<Result<VaultState>>;
   copy(id: string, field: 'username' | 'password'): Promise<Result<void>>;
   copyExtra(id: string, index: number): Promise<Result<void>>;
+  copyCustomField(id: string, index: number): Promise<Result<void>>;
+  copyHistory(id: string, index: number): Promise<Result<void>>;
+  downloadAttachment(id: string, attachmentId: string): Promise<Result<boolean>>;
+  deleteAttachment(id: string, attachmentId: string): Promise<Result<ItemDetail>>;
+  addAttachment(id: string): Promise<Result<ItemDetail | null>>;
   generate(options: PasswordOptions): Promise<Result<string>>;
   browserSetup(): Promise<Result<BrowserSetup>>;
   connectBrowser(browser: Browser): Promise<Result<void>>;

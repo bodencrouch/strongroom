@@ -1,4 +1,5 @@
-import { dialog, Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { basename, join } from 'node:path';
+import { app, dialog, Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import type {
   ItemDetail,
   ItemMenuAction,
@@ -94,6 +95,20 @@ export function installNativeInteractions(window: BrowserWindow) {
         });
       });
     },
+    /** Asks where to save a download. Returns null when the user cancels. */
+    async chooseSavePath(suggestedName: string): Promise<string | null> {
+      if (window.isDestroyed() || !window.isVisible()) return null;
+      const result = await dialog.showSaveDialog(window, {
+        defaultPath: join(app.getPath('downloads'), basename(suggestedName) || 'attachment'),
+      });
+      return result.canceled || !result.filePath ? null : result.filePath;
+    },
+    /** Asks which file to attach. Returns null when the user cancels. */
+    async chooseOpenPath(): Promise<string | null> {
+      if (window.isDestroyed() || !window.isVisible()) return null;
+      const result = await dialog.showOpenDialog(window, { properties: ['openFile'] });
+      return result.canceled || !result.filePaths[0] ? null : result.filePaths[0];
+    },
     async confirm(action: NativeConfirmation) {
       if (confirmation || window.isDestroyed() || !window.isVisible()) return false;
       const controller = new AbortController();
@@ -101,23 +116,30 @@ export function installNativeInteractions(window: BrowserWindow) {
       try {
         const trash = action === 'trash';
         const folder = action === 'deleteFolder';
+        const attachment = action === 'deleteAttachment';
         const result = await dialog.showMessageBox(window, {
           type: 'warning',
-          message: folder
-            ? 'Delete this folder?'
-            : trash
-              ? 'Move this item to Trash?'
-              : 'Discard changes?',
-          detail: folder
-            ? 'Items in this folder move to No folder. They are not deleted.'
-            : trash
-              ? 'You can restore it from Trash. This does not delete it permanently.'
-              : 'Your unsaved changes will be lost.',
-          buttons: folder
-            ? ['Cancel', 'Delete folder']
-            : trash
-              ? ['Cancel', 'Move to Trash']
-              : ['Keep editing', 'Discard changes'],
+          message: attachment
+            ? 'Delete this attachment?'
+            : folder
+              ? 'Delete this folder?'
+              : trash
+                ? 'Move this item to Trash?'
+                : 'Discard changes?',
+          detail: attachment
+            ? 'The file is removed from this item. This cannot be undone.'
+            : folder
+              ? 'Items in this folder move to No folder. They are not deleted.'
+              : trash
+                ? 'You can restore it from Trash. This does not delete it permanently.'
+                : 'Your unsaved changes will be lost.',
+          buttons: attachment
+            ? ['Cancel', 'Delete attachment']
+            : folder
+              ? ['Cancel', 'Delete folder']
+              : trash
+                ? ['Cancel', 'Move to Trash']
+                : ['Keep editing', 'Discard changes'],
           defaultId: 0,
           cancelId: 0,
           noLink: true,
