@@ -155,6 +155,7 @@ export type BrowserVaultQuery = z.infer<typeof browserVaultQuerySchema>;
 
 export const browserRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('detail'), id }).strict(),
+  z.object({ type: z.literal('totp'), id }).strict(),
   z.object({ type: z.literal('save'), draft: itemDraftSchema }).strict(),
   z.object({ type: z.literal('delete'), id }).strict(),
   z.object({ type: z.literal('restore'), id }).strict(),

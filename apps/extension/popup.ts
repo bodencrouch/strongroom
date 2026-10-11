@@ -469,6 +469,7 @@ function renderDetail(item: ItemDetail) {
     );
     const value = row.querySelector('.field-value')!;
     let revealed = false;
+    addTotp(item, row);
     if (item.password)
       row.append(
         button('Reveal', () => {
@@ -493,6 +494,60 @@ function renderDetail(item: ItemDetail) {
   }
   addField(item, 'Notes', item.notes || 'No notes', 'notes');
   back.focus();
+}
+/**
+ * Shows the current one-time code under the password row. The secret stays in
+ * the desktop app. The countdown runs locally and the code is fetched again
+ * only when it expires.
+ */
+function addTotp(item: ItemDetail, after: Element) {
+  const version = viewVersion;
+  const lifetime = generation;
+  const row = element('div', 'field');
+  const text = element('div', 'field-text');
+  const label = element('span', 'field-label', 'Verification code');
+  const value = element('span', 'field-value', '');
+  text.append(label, value);
+  row.append(text);
+  let code = '';
+  let expiresAt = 0;
+  let timer: ReturnType<typeof setInterval> | undefined;
+  const copy = button('Copy', () => {
+    void navigator.clipboard.writeText(code).then(
+      () => feedback('Verification code copied'),
+      () => feedback('Could not copy the code.', true),
+    );
+  });
+  copy.setAttribute('aria-label', 'Copy verification code');
+  row.append(copy);
+
+  function paint() {
+    const left = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+    label.textContent = `Verification code · ${left}s`;
+    if (left === 0) void load();
+  }
+  async function load() {
+    if (timer) clearInterval(timer);
+    const response = await send<{ code: string; remaining: number } | null>({
+      type: 'totp',
+      id: item.id,
+    });
+    if (!current(version, lifetime) || (!row.isConnected && code)) return;
+    if (!response.ok || !response.value) {
+      row.remove();
+      return;
+    }
+    code = response.value.code;
+    expiresAt = Date.now() + response.value.remaining * 1000;
+    value.textContent = code.length === 6 ? `${code.slice(0, 3)} ${code.slice(3)}` : code;
+    if (!row.isConnected) after.after(row);
+    paint();
+    timer = setInterval(() => {
+      if (!current(version, lifetime) || !row.isConnected) clearInterval(timer);
+      else paint();
+    }, 1000);
+  }
+  void load();
 }
 function addField(
   item: ItemSummary,

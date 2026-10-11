@@ -8,9 +8,9 @@ Your account and vault stay as they are. Strongroom does not store your vault it
 
 ## What you get
 
-- **Verification codes.** See the one-time code for any login that has an authenticator secret. The code is computed on your machine. The secret never reaches the app window.
-- **Vault health.** Find reused passwords, weak passwords and sites that use plain `http://`. An optional check looks for passwords in known leaks and sends only a 5-character hash prefix.
-- **Command line.** `strongroom totp`, `strongroom health` and `strongroom attach` work on top of `bw`.
+- **Verification codes.** See the one-time code for any login that has an authenticator secret, in the desktop app, the browser popup and the command line. The code is computed on your machine. The secret never reaches the window.
+- **Vault health.** Find reused passwords, weak passwords and sites that use plain `http://`. Optional checks look for passwords in known leaks, which sends only a 5-character hash prefix, and for sites that offer two-step login you have not turned on. Open Settings, then Vault health.
+- **Command line.** `strongroom totp`, `strongroom health`, `strongroom attach` and `strongroom send` work on top of `bw`.
 - **Search and fill.** Search from the keyboard, and fill logins from the browser extension.
 
 Some features are decided by your Bitwarden server, such as file attachments. Strongroom asks `bw` to do the work and shows the server's answer. See [docs/FEATURES.md](docs/FEATURES.md) for the full list and which side each feature lives on.
@@ -35,7 +35,9 @@ pnpm run build      # desktop, extensions, Raycast
 ```sh
 export BW_SESSION="$(bw unlock --raw)"
 node apps/cli/src/index.ts totp github
-node apps/cli/src/index.ts health --breaches
+node apps/cli/src/index.ts health --breaches --inactive-2fa
+node apps/cli/src/index.ts attach ./receipt.pdf <item-id>
+node apps/cli/src/index.ts send ./notes.txt --days 3
 ```
 
 ## License

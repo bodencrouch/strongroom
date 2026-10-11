@@ -123,6 +123,7 @@ export async function startBridges({
         const icon = await websiteIcons.get(item.website);
         return startedAt === epoch() && vault.snapshot().status === 'unlocked' ? icon : null;
       }
+      if (request.type === 'totp') return vault.totp(request.id);
       if (request.type === 'fill') return vault.fill(request.id, request.url);
       const unhandled: never = request;
       throw new UserError(`Unsupported browser request: ${String(unhandled)}`);
