@@ -1,0 +1,23 @@
+# Strongroom
+
+> An unofficial Bitwarden client: a desktop app, a browser extension, a Raycast extension and a command line. It runs on top of the official Bitwarden CLI (`bw`), which keeps sign-in and vault cryptography. Not affiliated with or endorsed by Bitwarden, Inc.
+
+Strongroom starts from dillionverma/bitlatch (MIT) and adds one-time codes, vault health reports, folders, attachments, Sends, passphrase and username generators, and import and export. Source: https://github.com/bodencrouch/strongroom
+
+It does not bypass server-side limits. Features that Bitwarden's servers or organization keys decide, such as emergency access, organizations and single sign-on, are not built. The parity page says which is which.
+
+## Docs
+
+- [Home](https://bodencrouch.github.io/strongroom/): what it is and what it is not
+- [Features](https://bodencrouch.github.io/strongroom/features/): where each feature lives, client or server
+- [Parity](https://bodencrouch.github.io/strongroom/parity/): done, planned, and not possible from a client
+- [CLI](https://bodencrouch.github.io/strongroom/cli/): `totp`, `health`, `attach`, `send`
+- [Install](https://bodencrouch.github.io/strongroom/install/): build from source, requirements
+- [Privacy and network use](https://bodencrouch.github.io/strongroom/privacy/): every outbound request and whether it is opt-in
+- [Security model](https://bodencrouch.github.io/strongroom/security/): what stays in the main process, clipboard clearing, the bridge
+- [FAQ](https://bodencrouch.github.io/strongroom/faq/)
+
+## Optional
+
+- [Changelog](https://bodencrouch.github.io/strongroom/changelog/)
+- [Issues](https://github.com/bodencrouch/strongroom/issues)
