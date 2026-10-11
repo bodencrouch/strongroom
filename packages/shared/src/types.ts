@@ -202,6 +202,16 @@ export type BrowserSetup = Record<Browser, { available: boolean; reason?: string
 
 export type BrowserConnection = 'connected' | 'not-detected' | 'setup-error';
 
+/** Vault health results. Only item names and counts leave the main process, never passwords. */
+export interface HealthSummary {
+  checked: number;
+  reused: { names: string[] }[];
+  weak: { name: string; reasons: string[] }[];
+  insecure: { name: string }[];
+  /** Present only when the breach lookup was requested. */
+  exposed?: { name: string; count: number }[];
+}
+
 export interface StrongroomApi {
   lockTimeout(): Promise<Result<LockTimeoutMinutes>>;
   setLockTimeout(minutes: LockTimeoutMinutes): Promise<Result<LockTimeoutMinutes>>;
@@ -225,6 +235,7 @@ export interface StrongroomApi {
   items(): Promise<Result<ItemSummary[]>>;
   trash(): Promise<Result<ItemSummary[]>>;
   totp(id: string): Promise<Result<TotpCode | null>>;
+  health(breaches: boolean): Promise<Result<HealthSummary>>;
   detail(id: string): Promise<Result<ItemDetail>>;
   save(draft: ItemDraft): Promise<Result<ItemDetail>>;
   setFavorite(id: string, favorite: boolean): Promise<Result<ItemSummary>>;

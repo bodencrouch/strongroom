@@ -10,6 +10,7 @@ import {
   GearSix,
   LockKey,
   PaintBrush,
+  Heartbeat,
 } from '@phosphor-icons/react';
 import {
   lockTimeoutMinutes,
@@ -21,6 +22,7 @@ import {
   type VaultState,
 } from '@strongroom/shared/types';
 import { useWebsiteIcons } from './WebsiteIcons';
+import { HealthSection } from './HealthSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -61,6 +63,12 @@ const sections = [
     label: 'Security',
     icon: ShieldCheck,
     description: 'Choose how you unlock your vault on this Mac.',
+  },
+  {
+    id: 'health',
+    label: 'Vault health',
+    icon: Heartbeat,
+    description: 'Find reused, weak and exposed passwords.',
   },
   {
     id: 'about',
@@ -546,6 +554,7 @@ export function Settings({
               </p>
             </section>
           )}
+          {section === 'health' && <HealthSection />}
           {section === 'about' && (
             <section className="task-settings-section">
               <h3>Your vault</h3>

@@ -1,4 +1,4 @@
-import { claspPaths } from '@strongroom/shared/brand';
+import { strongroomPaths } from '@strongroom/shared/brand';
 
 export function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -22,9 +22,9 @@ export function mark() {
   background.setAttribute('width', '864');
   background.setAttribute('height', '864');
   background.setAttribute('rx', '194');
-  background.setAttribute('fill', '#145CFF');
+  background.setAttribute('fill', '#0F766E');
   svg.append(background);
-  for (const d of claspPaths) {
+  for (const d of strongroomPaths) {
     const path = document.createElementNS(svg.namespaceURI, 'path');
     path.setAttribute('d', d);
     svg.append(path);

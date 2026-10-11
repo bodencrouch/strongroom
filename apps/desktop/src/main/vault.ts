@@ -5,6 +5,12 @@ import { fillableUrl, matchesUri, normalizeServer, webUrl, type CipherUri } from
 import { UserError, type BrowserVaultQuery } from '@strongroom/shared/protocol';
 import { totpFromField, type TotpCode } from '@strongroom/shared/totp';
 import {
+  buildHealthReport,
+  findExposed,
+  hibpRangeFetch,
+  type HealthItem,
+} from '@strongroom/shared/health';
+import {
   ES256,
   attestationObject,
   authenticatorData,
@@ -25,6 +31,7 @@ import type {
   BrowserVaultPage,
   CaptureOffer,
   ChallengeAnswer,
+  HealthSummary,
   ItemDetail,
   ItemSummary,
   LoginChallenge,
@@ -554,6 +561,41 @@ export class Vault extends EventEmitter {
     if (isRestricted(cipher)) return null;
     const secret = cipher.login?.totp;
     return secret ? totpFromField(secret) : null;
+  }
+
+  /**
+   * Reused, weak and unencrypted-site checks over the personal logins in the
+   * vault. The breach lookup only runs when asked, and sends hash prefixes.
+   */
+  async health(breaches: boolean): Promise<HealthSummary> {
+    this.requireUnlocked();
+    const generation = this.generation;
+    const logins = [...this.ciphers.values()].filter(
+      (cipher) => cipher.type === 1 && !cipher.deletedDate && !isRestricted(cipher),
+    );
+    const names = new Map(logins.map((cipher) => [cipher.id, cipher.name]));
+    const items: HealthItem[] = logins.map((cipher) => ({
+      id: cipher.id,
+      name: cipher.name,
+      password: cipher.login?.password,
+      uris: (cipher.login?.uris ?? []).map((row) => row.uri ?? '').filter(Boolean),
+    }));
+    const label = (id: string) => names.get(id) ?? '';
+    const report = buildHealthReport(items);
+    const summary: HealthSummary = {
+      checked: items.length,
+      reused: report.reused.map((group) => ({ names: group.itemIds.map(label) })),
+      weak: report.weak.map((row) => ({ name: label(row.itemId), reasons: row.reasons })),
+      insecure: report.insecureUris.map((row) => ({ name: label(row.itemId) })),
+    };
+    if (breaches) {
+      const exposed = await findExposed(items, hibpRangeFetch);
+      // The vault may have locked while the lookup ran.
+      if (generation !== this.generation)
+        throw new UserError('The vault was locked. Unlock it and try again.');
+      summary.exposed = exposed.map((row) => ({ name: label(row.itemId), count: row.count }));
+    }
+    return summary;
   }
 
   /** Moves an item to Bitwarden's trash, where it can still be restored. */

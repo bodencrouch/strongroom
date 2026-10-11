@@ -3,10 +3,13 @@
 // authentication and vault cryptography. This tool only reads items that `bw`
 // has already decrypted and never prints passwords or one-time secrets.
 import { execFile } from 'node:child_process';
+import { basename } from 'node:path';
 import { promisify } from 'node:util';
 import {
   buildHealthReport,
+  fetchTwoStepDirectory,
   findExposed,
+  findInactiveTwoStep,
   hibpRangeFetch,
   type HealthItem,
 } from '../../../packages/shared/src/health.ts';
@@ -28,9 +31,17 @@ Usage:
   strongroom attach <file> <item-id>
                             Attach a file to a login. Needs an account or server
                             that allows attachments; Strongroom does not change that.
-  strongroom health [--breaches]  Report reused, weak and unencrypted-website logins.
+  strongroom health [--breaches] [--inactive-2fa]
+                            Report reused, weak and unencrypted-website logins.
                             --breaches also checks passwords against known leaks
                             (sends only 5-character hash prefixes).
+                            --inactive-2fa lists logins whose site offers one-time
+                            codes but that have none set (downloads the public
+                            2fa.directory list).
+  strongroom send <file> [--days N]
+                            Create a file Send (default expiry 7 days) and print
+                            its link. Needs an account or server that allows file
+                            Sends; Strongroom does not change that.
 
 Unlock first, then export the session for this shell:
   export BW_SESSION="$(bw unlock --raw)"`;
@@ -71,7 +82,7 @@ async function totp(search: string | undefined) {
   console.error(`${matches[0]!.name}: valid for ${code.remaining}s`);
 }
 
-async function health(withBreaches: boolean) {
+async function health(withBreaches: boolean, withInactive: boolean) {
   const logins = (await bwItems()).filter((item) => item.type === 1);
   const names = new Map(logins.map((item) => [item.id, item.name]));
   const items: HealthItem[] = logins.map((item) => ({
@@ -79,6 +90,7 @@ async function health(withBreaches: boolean) {
     name: item.name,
     password: item.login?.password,
     uris: (item.login?.uris ?? []).map((row) => row.uri ?? '').filter(Boolean),
+    hasTotp: Boolean(item.login?.totp),
   }));
   const report = buildHealthReport(items);
   const label = (id: string) => names.get(id) ?? id;
@@ -96,6 +108,49 @@ async function health(withBreaches: boolean) {
     for (const row of exposed) console.log(`  ${label(row.itemId)} (seen ${row.count} times)`);
   } else {
     console.log('\nBreach check skipped. Add --breaches to run it.');
+  }
+  if (withInactive) {
+    const inactive = findInactiveTwoStep(items, await fetchTwoStepDirectory());
+    console.log(`\nLogins with unused two-step codes: ${inactive.length}`);
+    for (const item of inactive) console.log(`  ${item.name}`);
+  }
+}
+
+async function send(args: string[]) {
+  const daysAt = args.indexOf('--days');
+  let days = 7;
+  if (daysAt >= 0) {
+    days = Number(args[daysAt + 1]);
+    if (!Number.isInteger(days) || days < 1)
+      throw new Error('--days needs a whole number of days.');
+  }
+  const file = args.find((_, i) => daysAt < 0 || (i !== daysAt && i !== daysAt + 1));
+  if (!file) throw new Error('Usage: strongroom send <file> [--days N]');
+  const session = process.env.BW_SESSION;
+  if (!session) throw new Error('Vault is locked. Run: export BW_SESSION="$(bw unlock --raw)"');
+  const env = { ...process.env, BW_SESSION: session };
+  try {
+    const { stdout: raw } = await run('bw', ['send', 'template', 'send.file'], { env });
+    const template = JSON.parse(raw) as Record<string, unknown>;
+    const name = basename(file);
+    template.name = name;
+    template.deletionDate = new Date(Date.now() + days * 86_400_000).toISOString();
+    template.file = { ...(template.file as object), fileName: name };
+    const encoded = await new Promise<string>((resolve, reject) => {
+      const child = execFile('bw', ['encode'], { env }, (err, out) =>
+        err ? reject(err) : resolve(out.trim()),
+      );
+      child.stdin?.end(JSON.stringify(template));
+    });
+    const { stdout } = await run('bw', ['send', 'create', encoded, '--file', file], { env });
+    const created = JSON.parse(stdout) as { accessUrl?: string };
+    if (!created.accessUrl) throw new Error('no url');
+    console.log(created.accessUrl);
+  } catch {
+    // Deliberately generic: `bw` output and arguments can be sensitive.
+    throw new Error(
+      'Bitwarden did not accept the Send. Your plan or server may not allow file Sends.',
+    );
   }
 }
 
@@ -119,7 +174,10 @@ async function main(argv: string[]) {
   const [command, ...rest] = argv;
   if (command === 'totp') return totp(rest.join(' ') || undefined);
   if (command === 'attach') return attach(rest[0], rest[1]);
-  if (command === 'health') return health(rest.includes('--breaches'));
+  if (command === 'send') return send(rest);
+  if (command === 'health') {
+    return health(rest.includes('--breaches'), rest.includes('--inactive-2fa'));
+  }
   console.log(USAGE);
   if (command && command !== '--help' && command !== '-h') process.exitCode = 1;
 }

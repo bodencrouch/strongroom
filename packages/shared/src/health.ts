@@ -6,6 +6,8 @@ export interface HealthItem {
   name: string;
   password?: string | null;
   uris?: readonly string[];
+  /** True when the login has a one-time secret. The secret itself is never carried. */
+  hasTotp?: boolean;
 }
 
 export type WeakReason = 'short' | 'single-class' | 'repetitive' | 'sequential' | 'common';
@@ -151,3 +153,53 @@ export const hibpRangeFetch = async (prefix: string): Promise<string> => {
   if (!res.ok) throw new Error('Breach lookup failed.');
   return res.text();
 };
+
+/** Hostname plus each parent domain, longest first. Never yields a bare TLD. */
+function hostCandidates(host: string): string[] {
+  const labels = host.toLowerCase().replace(/\.$/, '').split('.');
+  const out: string[] = [];
+  for (let i = 0; i <= labels.length - 2; i++) out.push(labels.slice(i).join('.'));
+  return out;
+}
+
+/**
+ * Logins whose site supports TOTP two-step login but that have no TOTP set.
+ * `directory` maps a lowercase hostname to true. Matching tries the item's
+ * hostname, then each parent domain.
+ */
+export function findInactiveTwoStep(
+  items: readonly HealthItem[],
+  directory: ReadonlyMap<string, boolean>,
+): HealthItem[] {
+  return items.filter((item) => {
+    if (item.hasTotp) return false;
+    for (const uri of item.uris ?? []) {
+      let host: string;
+      try {
+        host = new URL(uri).hostname;
+      } catch {
+        continue;
+      }
+      if (hostCandidates(host).some((candidate) => directory.get(candidate) === true)) return true;
+    }
+    return false;
+  });
+}
+
+/** Opt-in download of the public 2fa.directory list. Only call when the user asks. */
+export async function fetchTwoStepDirectory(): Promise<Map<string, boolean>> {
+  const res = await fetch('https://api.2fa.directory/v3/totp.json');
+  if (!res.ok) throw new Error('Could not download the two-step site list.');
+  const rows: unknown = await res.json();
+  const directory = new Map<string, boolean>();
+  if (!Array.isArray(rows)) return directory;
+  for (const row of rows) {
+    const entry = Array.isArray(row) ? (row[1] as Record<string, unknown> | undefined) : undefined;
+    if (!entry) continue;
+    const extra = Array.isArray(entry['additional-domains']) ? entry['additional-domains'] : [];
+    for (const domain of [entry.domain, ...extra]) {
+      if (typeof domain === 'string' && domain) directory.set(domain.toLowerCase(), true);
+    }
+  }
+  return directory;
+}

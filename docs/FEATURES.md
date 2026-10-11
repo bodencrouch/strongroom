@@ -15,9 +15,9 @@ Server classifications below come from Bitwarden's public documentation. They ar
 | Weak password report           | Client                             | Done: `strongroom health`                                                         |
 | Unsecured website report       | Client                             | Done: `strongroom health`                                                         |
 | Exposed password report        | Client plus a public leak lookup   | Done, opt-in: `strongroom health --breaches`                                      |
-| Inactive two-step report       | Client plus a public list of sites | Not started                                                                 |
+| Inactive two-step report       | Client plus a public list of sites | Done, opt-in: `strongroom health --inactive-2fa`                                  |
 | File attachments               | Server                             | Wired: `strongroom attach`. Works where the account or server allows it           |
-| File Sends                     | Server                             | Not started                                                                 |
+| File Sends                     | Server                             | Wired: `strongroom send`. Works where the account or server allows it             |
 | Emergency access               | Server                             | Not possible through `bw`. Needs server API work                            |
 | YubiKey and Duo two-step login | Server                             | Nothing to build: set on the account, and sign-in already asks for the code |
 | Priority support               | Bitwarden                          | Not applicable                                                              |

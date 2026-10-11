@@ -1,4 +1,4 @@
-import { claspPaths } from '@strongroom/shared/brand';
+import { strongroomPaths } from '@strongroom/shared/brand';
 
 export function Mark({ size = 22 }: { size?: number }) {
   return (
@@ -9,7 +9,7 @@ export function Mark({ size = 22 }: { size?: number }) {
       fill="currentColor"
       aria-hidden="true"
     >
-      {claspPaths.map((d) => (
+      {strongroomPaths.map((d) => (
         <path key={d} d={d} />
       ))}
     </svg>

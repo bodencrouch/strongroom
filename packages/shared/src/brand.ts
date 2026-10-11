@@ -1,5 +1,8 @@
-// Cobalt clasp foreground from assets/brand/source/clasp.svg.
-export const claspPaths = [
-  'M304 312 H528 Q552 312 552 336 V392 Q552 416 528 416 H352 Q328 416 328 440 V552 Q328 576 352 576 H432 Q456 576 456 600 V656 Q456 680 432 680 H304 Q224 680 224 600 V392 Q224 312 304 312 Z',
-  'M720 712 H496 Q472 712 472 688 V632 Q472 608 496 608 H672 Q696 608 696 584 V472 Q696 448 672 448 H592 Q568 448 568 424 V368 Q568 344 592 344 H720 Q800 344 800 424 V632 Q800 712 720 712 Z',
+// Strongroom mark: a strongroom plate over a staple, as filled shapes (assets/brand/source/strongroom-glyph.svg).
+// The slot and hole wind the opposite way so they cut out of the plate.
+export const strongroomPaths = [
+  // Staple
+  'M368 780 V610 A144 144 0 0 1 656 610 V780 H592 V610 A80 80 0 0 0 432 610 V780 Z',
+  // Plate with slot and hole
+  'M296 262 H728 A48 48 0 0 1 776 310 V450 A48 48 0 0 1 728 498 H296 A48 48 0 0 1 248 450 V310 A48 48 0 0 1 296 262 Z M512 330 A40 40 0 0 0 472 370 V390 A40 40 0 0 0 552 390 V370 A40 40 0 0 0 512 330 Z M316 354 A26 26 0 0 0 290 380 A26 26 0 0 0 316 406 A26 26 0 0 0 342 380 A26 26 0 0 0 316 354 Z',
 ];
