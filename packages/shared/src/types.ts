@@ -416,6 +416,7 @@ export interface StrongroomApi {
   renameFolder(id: string, name: string): Promise<Result<Folder>>;
   deleteFolder(id: string): Promise<Result<VaultState>>;
   totp(id: string): Promise<Result<TotpCode | null>>;
+  copyTotp(id: string): Promise<Result<void>>;
   health(breaches: boolean): Promise<Result<HealthSummary>>;
   detail(id: string): Promise<Result<ItemDetail>>;
   save(draft: ItemDraft): Promise<Result<ItemDetail>>;

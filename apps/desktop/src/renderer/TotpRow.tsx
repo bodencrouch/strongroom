@@ -41,9 +41,10 @@ export function TotpRow({ itemId, disabled }: { itemId: string; disabled: boolea
   async function copy() {
     if (!totp) return;
     try {
-      await navigator.clipboard.writeText(totp.code);
-      setCopied(true);
-      setTimeout(() => alive.current && setCopied(false), 2000);
+      // Through the main process, so the clipboard clears after 30 s like a password copy.
+      const result = await window.strongroom.copyTotp(itemId);
+      setCopied(result.ok);
+      if (result.ok) setTimeout(() => alive.current && setCopied(false), 2000);
     } catch {
       setCopied(false);
     }

@@ -141,7 +141,15 @@ export class DesktopLifecycle {
     return this.copyValue((vault) => vault.sendLink(id));
   }
 
-  private copyValue(read: (vault: Vault) => string) {
+  copyTotp(id: string) {
+    return this.copyValue(async (vault) => {
+      const code = await vault.totp(id);
+      if (!code) throw new UserError('This item has no one-time code.');
+      return code.code;
+    });
+  }
+
+  private copyValue(read: (vault: Vault) => string | Promise<string>) {
     const epoch = this.epoch;
     this.clipboardQueue = this.clipboardQueue
       .catch(() => undefined)
@@ -149,8 +157,10 @@ export class DesktopLifecycle {
         this.assertRunning();
         if (!this.vault || epoch !== this.epoch)
           throw new UserError('Vault locked. Try again after unlocking.');
-        this.copiedValue = read(this.vault);
-        await clipboard.writeText(this.copiedValue);
+        const value = await read(this.vault);
+        if (epoch !== this.epoch) throw new UserError('Vault locked. Try again after unlocking.');
+        this.copiedValue = value;
+        await clipboard.writeText(value);
         if (this.clipboardTimer) clearTimeout(this.clipboardTimer);
         this.clipboardTimer = setTimeout(
           () => void this.clearCopiedSecret().catch(() => undefined),

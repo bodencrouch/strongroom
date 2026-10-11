@@ -99,7 +99,7 @@ export async function startBridges({
         await handleRequest(request);
         return vault.snapshot().status;
       }
-      if (request.type === 'copy') {
+      if (request.type === 'copy' || request.type === 'copyTotp') {
         vault.requireBrowserItem(request.id, true);
         await handleRequest(request);
         return null;

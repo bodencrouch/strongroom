@@ -942,7 +942,7 @@ export class Vault extends EventEmitter {
    */
   async totp(id: string): Promise<TotpCode | null> {
     const cipher = this.item(id);
-    if (isRestricted(cipher)) return null;
+    if (isRestricted(cipher) || cipher.deletedDate) return null;
     const secret = cipher.login?.totp;
     return secret ? totpFromField(secret) : null;
   }

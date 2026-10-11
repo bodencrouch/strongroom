@@ -513,9 +513,10 @@ function addTotp(item: ItemDetail, after: Element) {
   let expiresAt = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
   const copy = button('Copy', () => {
-    void navigator.clipboard.writeText(code).then(
+    void operation(
+      { type: 'copyTotp', id: item.id },
       () => feedback('Verification code copied'),
-      () => feedback('Could not copy the code.', true),
+      'Copying…',
     );
   });
   copy.setAttribute('aria-label', 'Copy verification code');

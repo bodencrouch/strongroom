@@ -323,6 +323,8 @@ async function handleRequest(request: DesktopRequest): Promise<unknown> {
     }
     case 'copy':
       return lifecycle.copy(request.id, request.field);
+    case 'copyTotp':
+      return lifecycle.copyTotp(request.id);
     case 'copyExtra':
       return lifecycle.copyExtra(request.id, request.index);
     case 'copyCustomField':

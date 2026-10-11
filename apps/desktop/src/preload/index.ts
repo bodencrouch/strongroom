@@ -37,6 +37,7 @@ const api: StrongroomApi = {
   deleteFolder: (id) => request({ type: 'deleteFolder', id }),
   detail: (id) => request({ type: 'detail', id }),
   totp: (id) => request({ type: 'totp', id }),
+  copyTotp: (id) => request({ type: 'copyTotp', id }),
   health: (breaches) => request({ type: 'health', breaches }),
   save: (draft) => request({ type: 'save', draft }),
   setFavorite: (id, favorite) => request({ type: 'setFavorite', id, favorite }),

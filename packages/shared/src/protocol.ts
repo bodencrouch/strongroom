@@ -222,6 +222,7 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('deleteFolder'), id }).strict(),
   z.object({ type: z.literal('detail'), id }).strict(),
   z.object({ type: z.literal('totp'), id }).strict(),
+  z.object({ type: z.literal('copyTotp'), id }).strict(),
   z.object({ type: z.literal('health'), breaches: z.boolean() }).strict(),
   z.object({ type: z.literal('save'), draft: itemDraftSchema }).strict(),
   z.object({ type: z.literal('setFavorite'), id, favorite: z.boolean() }).strict(),
@@ -280,6 +281,7 @@ export type BrowserVaultQuery = z.infer<typeof browserVaultQuerySchema>;
 export const browserRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('detail'), id }).strict(),
   z.object({ type: z.literal('totp'), id }).strict(),
+  z.object({ type: z.literal('copyTotp'), id }).strict(),
   z.object({ type: z.literal('save'), draft: itemDraftSchema }).strict(),
   z.object({ type: z.literal('delete'), id }).strict(),
   z.object({ type: z.literal('restore'), id }).strict(),

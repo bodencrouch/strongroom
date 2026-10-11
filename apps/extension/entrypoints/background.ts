@@ -241,6 +241,7 @@ export default defineBackground(() => {
           'lock',
           'detail',
           'totp',
+          'copyTotp',
           'save',
           'delete',
           'restore',
