@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { lockTimeoutMinutes } from './types';
+import { cardBrands, cardMonths, lockTimeoutMinutes } from './types';
 
 export const lockTimeoutSchema = z.literal(lockTimeoutMinutes);
 export const passwordOptionsSchema = z
@@ -44,7 +44,21 @@ const draftBase = {
   notes: z.string().max(100_000),
   favorite: z.boolean(),
   folderId: id.nullable().optional(),
+  fields: z
+    .array(
+      z
+        .object({
+          sourceIndex: z.number().int().min(0).max(100_000).optional(),
+          name: z.string().max(500),
+          value: boundedText,
+          type: z.literal([0, 1, 2]),
+        })
+        .strict(),
+    )
+    .max(256)
+    .optional(),
 };
+const shortText = z.string().max(500);
 const sourceIndex = z.number().int().min(0).max(100_000);
 export const uriMatchSchema = z.union([z.null(), z.literal([0, 1, 2, 3, 5])]);
 export const itemDraftSchema = z.discriminatedUnion('type', [
@@ -72,6 +86,51 @@ export const itemDraftSchema = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ ...draftBase, type: z.literal(2) }).strict(),
+  z
+    .object({
+      ...draftBase,
+      type: z.literal(3),
+      cardholderName: shortText,
+      brand: z.union([z.literal(''), z.enum(cardBrands)]),
+      number: shortText,
+      expMonth: z.union([z.literal(''), z.enum(cardMonths)]),
+      expYear: z.string().max(8),
+      code: z.string().max(16),
+    })
+    .strict(),
+  z
+    .object({
+      ...draftBase,
+      type: z.literal(4),
+      title: shortText,
+      firstName: shortText,
+      middleName: shortText,
+      lastName: shortText,
+      username: shortText,
+      company: shortText,
+      ssn: shortText,
+      passportNumber: shortText,
+      licenseNumber: shortText,
+      email: shortText,
+      phone: shortText,
+      address1: shortText,
+      address2: shortText,
+      address3: shortText,
+      city: shortText,
+      state: shortText,
+      postalCode: shortText,
+      country: shortText,
+    })
+    .strict(),
+  z
+    .object({
+      ...draftBase,
+      type: z.literal(5),
+      publicKey: z.string().max(65_536),
+      privateKey: z.string().max(65_536),
+      keyFingerprint: shortText,
+    })
+    .strict(),
 ]);
 export { MAX_BROWSER_MESSAGE_BYTES } from './types';
 

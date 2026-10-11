@@ -409,7 +409,7 @@ function renderDetail(item: ItemDetail) {
   const actions = element('div', 'detail-actions');
   if (item.editable) {
     actions.append(
-      button('Edit', () => showEditor(itemDraft(item), item)),
+      ...(item.type <= 2 ? [button('Edit', () => showEditor(itemDraft(item), item))] : []),
       button(item.favorite ? 'Unfavorite' : 'Favorite', () => {
         void operation<ItemSummary>(
           { type: 'setFavorite', id: item.id, favorite: !item.favorite },

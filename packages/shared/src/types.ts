@@ -155,6 +155,11 @@ export interface ItemDetail extends ItemSummary {
   extra: ExtraField[];
   /** The item's custom fields, in the order Bitwarden stores them. */
   customFields: ExtraField[];
+  /** The custom fields the editor can change. */
+  fieldDrafts: FieldDraft[];
+  card?: CardBody;
+  identity?: IdentityBody;
+  sshKey?: SshKeyBody;
   passwordHistory: PasswordHistoryEntry[];
   attachments: AttachmentInfo[];
   uris: { sourceIndex: number; uri: string | null; match: number | null }[];
@@ -178,6 +183,61 @@ export type UriMatch = null | 0 | 1 | 2 | 3 | 5;
 export type UriDraft =
   | { action: 'keep'; sourceIndex: number }
   | { action: 'write'; sourceIndex?: number; uri: string; match: UriMatch };
+/** Bitwarden's card brand names. An empty string means no brand. */
+export const cardBrands = [
+  'Visa',
+  'Mastercard',
+  'Amex',
+  'Discover',
+  'Diners Club',
+  'JCB',
+  'Maestro',
+  'UnionPay',
+  'RuPay',
+  'Other',
+] as const;
+export const cardMonths = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] as const;
+export interface CardBody {
+  cardholderName: string;
+  brand: '' | (typeof cardBrands)[number];
+  number: string;
+  expMonth: '' | (typeof cardMonths)[number];
+  expYear: string;
+  code: string;
+}
+export interface IdentityBody {
+  title: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  username: string;
+  company: string;
+  ssn: string;
+  passportNumber: string;
+  licenseNumber: string;
+  email: string;
+  phone: string;
+  address1: string;
+  address2: string;
+  address3: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+export interface SshKeyBody {
+  publicKey: string;
+  privateKey: string;
+  keyFingerprint: string;
+}
+/** An editable custom field: text (0), hidden (1) or boolean (2, value "true" or "false"). */
+export interface FieldDraft {
+  /** Position in the stored list. Omitted for a new field. */
+  sourceIndex?: number;
+  name: string;
+  value: string;
+  type: 0 | 1 | 2;
+}
 export type ItemDraft = {
   id?: string;
   revisionDate?: string | null;
@@ -186,7 +246,15 @@ export type ItemDraft = {
   favorite: boolean;
   /** Omitted: keep the current folder (edits) or use no folder (new items). */
   folderId?: string | null;
-} & ({ type: 1; username: string; password: string; uris: UriDraft[] } | { type: 2 });
+  /** Omitted: keep the stored custom fields. Linked fields are always kept. */
+  fields?: FieldDraft[];
+} & (
+  | { type: 1; username: string; password: string; uris: UriDraft[] }
+  | { type: 2 }
+  | ({ type: 3 } & CardBody)
+  | ({ type: 4 } & IdentityBody)
+  | ({ type: 5 } & SshKeyBody)
+);
 
 export interface FillCredential {
   username: string;

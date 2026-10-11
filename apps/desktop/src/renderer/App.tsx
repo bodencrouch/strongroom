@@ -1045,6 +1045,7 @@ function VaultWorkspace({
             item={modal === 'edit' ? selected : null}
             folders={folders}
             defaultFolderId={newItemFolder}
+            defaultType={filter === 'notes' ? 2 : 1}
             onClose={() => {
               if (alive.current) setModal(null);
             }}

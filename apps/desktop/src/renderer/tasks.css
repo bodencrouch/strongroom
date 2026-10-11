@@ -378,10 +378,16 @@ html[data-reduced-motion='true'] .auth-mark[data-scanning='true'] {
   padding-bottom: 12px;
 }
 .task-uri-row select,
-#editor-type {
+#editor-type,
+#editor-brand,
+#editor-expMonth {
   background: var(--background);
   color: var(--foreground);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px;
+}
+
+.task-notes[data-masked='true'] {
+  -webkit-text-security: disc;
 }

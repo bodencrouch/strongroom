@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { CodeRejectedError, type CliPort, type CliPrompt } from './cli';
 import { fillableUrl, matchesUri, normalizeServer, webUrl, type CipherUri } from './matching';
 import { UserError, type BrowserVaultQuery } from '@strongroom/shared/protocol';
+import { cardBrands, cardMonths } from '@strongroom/shared/types';
 import { totpFromField, type TotpCode } from '@strongroom/shared/totp';
 import {
   buildHealthReport,
@@ -39,6 +40,10 @@ import type {
   ItemSummary,
   LoginChallenge,
   ItemDraft,
+  FieldDraft,
+  CardBody,
+  IdentityBody,
+  SshKeyBody,
   LoginInput,
   PasswordHistoryEntry,
   PasswordOptions,
@@ -632,6 +637,10 @@ export class Vault extends EventEmitter {
       notes: cipher.notes ?? '',
       extra: extraFields(cipher),
       customFields: customFieldRows(cipher),
+      fieldDrafts: fieldDrafts(cipher),
+      ...(cipher.type === 3 ? { card: cardBody(cipher) } : {}),
+      ...(cipher.type === 4 ? { identity: identityBody(cipher) } : {}),
+      ...(cipher.type === 5 ? { sshKey: sshKeyBody(cipher) } : {}),
       passwordHistory: historyRows(cipher),
       attachments: attachmentRows(cipher),
       revisionDate: cipher.revisionDate ?? null,
@@ -1261,6 +1270,9 @@ export class Vault extends EventEmitter {
         collectionIds: [],
         folderId: null,
         reprompt: 0,
+        favorite: false,
+        notes: null,
+        fields: [],
       };
     }
     this.assertGeneration(generation);
@@ -1274,9 +1286,50 @@ export class Vault extends EventEmitter {
       notes: draft.notes || null,
       favorite: draft.favorite,
     });
+    if (draft.fields !== undefined) {
+      const fields = mergeFields(cipher.fields, draft.fields);
+      if (fields.length || cipher.fields) cipher.fields = fields;
+    }
     if (draft.type === 2) {
       delete cipher.login;
       cipher.secureNote ??= { type: 0 };
+    } else if (draft.type === 3) {
+      const brand = draft.brand;
+      const month = draft.expMonth;
+      if (brand !== '' && !(cardBrands as readonly string[]).includes(brand))
+        throw new UserError('Choose a card brand from the list.');
+      if (month !== '' && !(cardMonths as readonly string[]).includes(month))
+        throw new UserError('Choose an expiration month from 1 to 12.');
+      const stored = cipher.card ?? {};
+      // A stored brand or month the list cannot show stays as it is until the user picks another.
+      const keep = (key: 'brand' | 'expMonth', value: string) =>
+        value === (key === 'brand' ? cardValue(stored, 'brand') : cardValue(stored, 'expMonth'))
+          ? stored[key]
+          : value || null;
+      cipher.card = {
+        ...stored,
+        cardholderName: draft.cardholderName || null,
+        brand: keep('brand', brand) ?? null,
+        number: draft.number || null,
+        expMonth: keep('expMonth', month) ?? null,
+        expYear: draft.expYear || null,
+        code: draft.code || null,
+      };
+    } else if (draft.type === 4) {
+      const identity: Record<string, string | null> = { ...cipher.identity };
+      for (const key of IDENTITY_KEYS) identity[key] = draft[key] || null;
+      cipher.identity = identity;
+    } else if (draft.type === 5) {
+      // Keys come from elsewhere. Existing keys are never rewritten; new ones are pasted whole.
+      if (!draft.id) {
+        if (!draft.publicKey.trim() || !draft.privateKey.trim() || !draft.keyFingerprint.trim())
+          throw new UserError('Paste the public key, private key and fingerprint.');
+        cipher.sshKey = {
+          privateKey: draft.privateKey,
+          publicKey: draft.publicKey,
+          keyFingerprint: draft.keyFingerprint,
+        };
+      }
     } else {
       const previous = cipher.login?.uris ?? [];
       const seen = new Set<number>();
@@ -1457,6 +1510,100 @@ function extraFields(cipher: Cipher): ExtraField[] {
   }
   return rows;
 }
+const IDENTITY_KEYS = [
+  'title',
+  'firstName',
+  'middleName',
+  'lastName',
+  'username',
+  'company',
+  'ssn',
+  'passportNumber',
+  'licenseNumber',
+  'email',
+  'phone',
+  'address1',
+  'address2',
+  'address3',
+  'city',
+  'state',
+  'postalCode',
+  'country',
+] as const satisfies readonly (keyof IdentityBody)[];
+
+/** A stored brand or month as the editor lists it; '' when the list has no entry for it. */
+function cardValue(
+  card: Record<string, string | null | undefined>,
+  key: 'brand',
+): CardBody['brand'];
+function cardValue(
+  card: Record<string, string | null | undefined>,
+  key: 'expMonth',
+): CardBody['expMonth'];
+function cardValue(card: Record<string, string | null | undefined>, key: 'brand' | 'expMonth') {
+  const value = card[key] ?? '';
+  if (key === 'brand') return cardBrands.find((brand) => brand === value) ?? '';
+  const month = /^\d{1,2}$/.test(value) ? String(Number(value)) : '';
+  return cardMonths.find((entry) => entry === month) ?? '';
+}
+function cardBody(cipher: Cipher): CardBody {
+  const c = cipher.card ?? {};
+  return {
+    cardholderName: c.cardholderName ?? '',
+    brand: cardValue(c, 'brand'),
+    number: c.number ?? '',
+    expMonth: cardValue(c, 'expMonth'),
+    expYear: c.expYear ?? '',
+    code: c.code ?? '',
+  };
+}
+function identityBody(cipher: Cipher): IdentityBody {
+  const i = cipher.identity ?? {};
+  return Object.fromEntries(
+    IDENTITY_KEYS.map((key) => [key, i[key] ?? '']),
+  ) as unknown as IdentityBody;
+}
+function sshKeyBody(cipher: Cipher): SshKeyBody {
+  const k = cipher.sshKey ?? {};
+  return {
+    publicKey: k.publicKey ?? '',
+    privateKey: k.privateKey ?? '',
+    keyFingerprint: k.keyFingerprint ?? '',
+  };
+}
+/** The custom fields the editor can change. Linked fields are left out. */
+function fieldDrafts(cipher: Cipher): FieldDraft[] {
+  if (isRestricted(cipher)) return [];
+  return (cipher.fields ?? []).flatMap((field, sourceIndex): FieldDraft[] => {
+    const type = field.type ?? 0;
+    if (type !== 0 && type !== 1 && type !== 2) return [];
+    return [{ sourceIndex, name: field.name ?? '', value: field.value ?? '', type }];
+  });
+}
+/**
+ * The stored list with the draft's editable fields swapped in. Linked fields
+ * stay where they were; fields that kept a sourceIndex keep their other keys.
+ */
+function mergeFields(stored: CipherField[] | null | undefined, rows: FieldDraft[]): CipherField[] {
+  const previous = stored ?? [];
+  const seen = new Set<number>();
+  const edited = rows.map((row): CipherField => {
+    const index = row.sourceIndex;
+    let original: CipherField | undefined;
+    if (index !== undefined) {
+      original = previous[index];
+      if (!original || original.type === 3 || seen.has(index))
+        throw new UserError('The custom fields changed. Reopen this item and try again.');
+      seen.add(index);
+    }
+    const value = row.type === 2 ? (row.value === 'true' ? 'true' : 'false') : row.value;
+    return { ...original, name: row.name, value, type: row.type };
+  });
+  previous.forEach((field, index) => {
+    if (field.type === 3) edited.splice(Math.min(index, edited.length), 0, field);
+  });
+  return edited;
+}
 /** Labels for the fields a linked custom field can point at. */
 const LINKED_LABELS: Record<number, string> = {
   100: 'Username',
@@ -1538,7 +1685,8 @@ function isRemovable(cipher: Cipher) {
 }
 function isEditable(cipher: Cipher) {
   return (
-    (cipher.type === 1 || cipher.type === 2) &&
+    cipher.type >= 1 &&
+    cipher.type <= 5 &&
     !isRestricted(cipher) &&
     !cipher.login?.fido2Credentials?.length
   );
