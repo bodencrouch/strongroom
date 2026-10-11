@@ -34,6 +34,7 @@ const api: StrongroomApi = {
   remove: (id) => request({ type: 'delete', id }),
   restore: (id) => request({ type: 'restore', id }),
   copy: (id, field) => request({ type: 'copy', id, field }),
+  copyExtra: (id, index) => request({ type: 'copyExtra', id, index }),
   generate: (options) => request({ type: 'generate', options }),
   browserSetup: () => request({ type: 'browserSetup' }),
   connectBrowser: (browser) => request({ type: 'connectBrowser', browser }),

@@ -31,6 +31,7 @@ import type {
   BrowserVaultPage,
   CaptureOffer,
   ChallengeAnswer,
+  ExtraField,
   HealthSummary,
   ItemDetail,
   ItemSummary,
@@ -53,6 +54,9 @@ export interface Cipher {
   revisionDate?: string | null;
   creationDate?: string | null;
   notes?: string | null;
+  card?: Record<string, string | null> | null;
+  identity?: Record<string, string | null> | null;
+  sshKey?: Record<string, string | null> | null;
   login?: {
     username?: string | null;
     password?: string | null;
@@ -544,12 +548,20 @@ export class Vault extends EventEmitter {
         match: row.match ?? null,
       })),
       notes: cipher.notes ?? '',
+      extra: extraFields(cipher),
       revisionDate: cipher.revisionDate ?? null,
       createdDate: cipher.creationDate ?? null,
       editable: isEditable(cipher) && !cipher.deletedDate,
       deletable: isRemovable(cipher) && !cipher.deletedDate,
       restorable: isRemovable(cipher) && Boolean(cipher.deletedDate),
     };
+  }
+
+  /** One value from an item's read-only fields, for copying. */
+  extraValue(id: string, index: number): string {
+    const row = extraFields(this.item(id))[index];
+    if (!row) throw new UserError('That field is no longer available.');
+    return row.value;
   }
 
   /**
@@ -1186,9 +1198,13 @@ function cacheFields(cipher: Cipher): Cipher {
     creationDate: cipher.creationDate,
     deletedDate: cipher.deletedDate,
     notes: isRestricted(cipher) ? null : cipher.notes,
+    card: isRestricted(cipher) ? null : cipher.card,
+    identity: isRestricted(cipher) ? null : cipher.identity,
+    sshKey: isRestricted(cipher) ? null : cipher.sshKey,
     login: {
       username: isRestricted(cipher) ? null : cipher.login?.username,
       password: isRestricted(cipher) ? null : cipher.login?.password,
+      totp: isRestricted(cipher) ? null : cipher.login?.totp,
       uris: cipher.login?.uris,
       fido2Credentials: isRestricted(cipher)
         ? cipher.login?.fido2Credentials?.length
@@ -1197,6 +1213,54 @@ function cacheFields(cipher: Cipher): Cipher {
         : (cipher.login?.fido2Credentials ?? []),
     },
   };
+}
+/** Read-only fields for cards, identities and SSH keys, in display order. */
+function extraFields(cipher: Cipher): ExtraField[] {
+  if (isRestricted(cipher)) return [];
+  const rows: ExtraField[] = [];
+  const add = (label: string, value: string | null | undefined, secret = false) => {
+    if (value && value.trim()) rows.push({ label, value, secret });
+  };
+  if (cipher.type === 3 && cipher.card) {
+    const c = cipher.card;
+    add('Cardholder name', c.cardholderName);
+    add('Brand', c.brand);
+    add('Number', c.number, true);
+    add(
+      'Expires',
+      c.expMonth && c.expYear ? `${c.expMonth}/${c.expYear}` : (c.expMonth ?? c.expYear),
+    );
+    add('Security code', c.code, true);
+  } else if (cipher.type === 4 && cipher.identity) {
+    const i = cipher.identity;
+    add('Name', [i.title, i.firstName, i.middleName, i.lastName].filter(Boolean).join(' '));
+    add('Username', i.username);
+    add('Company', i.company);
+    add('Email', i.email);
+    add('Phone', i.phone);
+    add(
+      'Address',
+      [
+        i.address1,
+        i.address2,
+        i.address3,
+        [i.postalCode, i.city].filter(Boolean).join(' '),
+        i.state,
+        i.country,
+      ]
+        .filter(Boolean)
+        .join(', '),
+    );
+    add('Social security number', i.ssn, true);
+    add('Passport number', i.passportNumber, true);
+    add('License number', i.licenseNumber, true);
+  } else if (cipher.type === 5 && cipher.sshKey) {
+    const k = cipher.sshKey;
+    add('Public key', k.publicKey);
+    add('Fingerprint', k.keyFingerprint);
+    add('Private key', k.privateKey, true);
+  }
+  return rows;
 }
 /** The passkeys on an item that this Mac can sign with. */
 function passkeysOf(cipher: Cipher): Fido2Credential[] {

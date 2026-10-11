@@ -314,6 +314,8 @@ async function handleRequest(request: DesktopRequest): Promise<unknown> {
     }
     case 'copy':
       return lifecycle.copy(request.id, request.field);
+    case 'copyExtra':
+      return lifecycle.copyExtra(request.id, request.index);
     default:
       return mutateVault(request);
   }

@@ -14,6 +14,7 @@ import { uriMatchOptions } from '@strongroom/shared/item-drafts';
 import type { ItemDetail } from '@strongroom/shared/types';
 import { ItemIcon, displayWebsite, typeName } from './items';
 import { TotpRow } from './TotpRow';
+import { ExtraFields } from './ExtraFields';
 import type { Notifier } from './Toasts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -304,6 +305,9 @@ export function Detail({
             </AlertDescription>
           </Alert>
         )}
+        {item.extra.length > 0 && (
+          <ExtraFields key={item.id} itemId={item.id} fields={item.extra} />
+        )}
         {item.notes && (
           <section className="notes task-notes-display rounded-lg border border-border bg-card">
             <h3 className="text-xs text-muted-foreground">Notes</h3>
@@ -314,7 +318,8 @@ export function Detail({
           <Alert>
             <AlertTitle>Read-only in Strongroom</AlertTitle>
             <AlertDescription>
-              Use the official Bitwarden client for this item's full details.
+              You can view and copy these details here. Use the official Bitwarden client to change
+              this item.
             </AlertDescription>
           </Alert>
         )}

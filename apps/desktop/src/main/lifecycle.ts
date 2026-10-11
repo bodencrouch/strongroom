@@ -122,6 +122,14 @@ export class DesktopLifecycle {
   };
 
   copy(id: string, field: CopyField) {
+    return this.copyValue((vault) => vault.detail(id)[field]);
+  }
+
+  copyExtra(id: string, index: number) {
+    return this.copyValue((vault) => vault.extraValue(id, index));
+  }
+
+  private copyValue(read: (vault: Vault) => string) {
     const epoch = this.epoch;
     this.clipboardQueue = this.clipboardQueue
       .catch(() => undefined)
@@ -129,7 +137,7 @@ export class DesktopLifecycle {
         this.assertRunning();
         if (!this.vault || epoch !== this.epoch)
           throw new UserError('Vault locked. Try again after unlocking.');
-        this.copiedValue = this.vault.detail(id)[field];
+        this.copiedValue = read(this.vault);
         await clipboard.writeText(this.copiedValue);
         if (this.clipboardTimer) clearTimeout(this.clipboardTimer);
         this.clipboardTimer = setTimeout(

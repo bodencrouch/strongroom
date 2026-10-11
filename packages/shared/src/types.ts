@@ -120,8 +120,16 @@ export interface ItemSummary {
   restricted: boolean;
 }
 
+/** A read-only field on a card, identity or SSH key. */
+export interface ExtraField {
+  label: string;
+  value: string;
+  secret: boolean;
+}
+
 export interface ItemDetail extends ItemSummary {
   password: string;
+  extra: ExtraField[];
   uris: { sourceIndex: number; uri: string | null; match: number | null }[];
   notes: string;
   revisionDate: string | null;
@@ -242,6 +250,7 @@ export interface StrongroomApi {
   remove(id: string): Promise<Result<VaultState>>;
   restore(id: string): Promise<Result<VaultState>>;
   copy(id: string, field: 'username' | 'password'): Promise<Result<void>>;
+  copyExtra(id: string, index: number): Promise<Result<void>>;
   generate(options: PasswordOptions): Promise<Result<string>>;
   browserSetup(): Promise<Result<BrowserSetup>>;
   connectBrowser(browser: Browser): Promise<Result<void>>;

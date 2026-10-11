@@ -134,6 +134,7 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
       field: z.enum(['username', 'password', 'notes', 'website']),
     })
     .strict(),
+  z.object({ type: z.literal('copyExtra'), id, index: z.number().int().min(0).max(63) }).strict(),
   z.object({ type: z.literal('generate'), options: passwordOptionsSchema }).strict(),
   z.object({ type: z.literal('browserSetup') }).strict(),
   z
