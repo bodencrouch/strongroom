@@ -445,8 +445,8 @@ export function Settings({
                 ))}
               </div>
               <p className="settings-caption">
-                Install the extension in your browser, then open it to connect. Keep Strongroom
-                running for autofill. The connection above updates automatically.
+                Install the extension in your browser, then open it to connect. Keep Strongroom running
+                for autofill. The connection above updates automatically.
               </p>
               <details className="settings-caption">
                 <summary>Developer installation</summary>
@@ -454,8 +454,8 @@ export function Settings({
                   <p>
                     For Chrome, Aside and other Chromium browsers: open the extension folder, enable
                     Developer mode on your browser’s extensions page, then choose Load unpacked and
-                    select that folder. After updating Strongroom, reload the extension and refresh
-                    open website tabs.
+                    select that folder. After updating Strongroom, reload the extension and refresh open
+                    website tabs.
                   </p>
                   <Button
                     type="button"

@@ -475,9 +475,7 @@ function VaultWorkspace({
       }
       const restore = action === 'restore';
       pending = notify.show('pending', restore ? 'Restoring…' : 'Moving to Trash…');
-      const changed = await (restore
-        ? window.strongroom.restore(item.id)
-        : window.strongroom.remove(item.id));
+      const changed = await (restore ? window.strongroom.restore(item.id) : window.strongroom.remove(item.id));
       if (!alive.current) return;
       notify.settle(
         pending,

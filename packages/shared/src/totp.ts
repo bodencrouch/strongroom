@@ -84,7 +84,10 @@ export function parseTotp(value: string): TotpParams | null {
   return secret ? { secret, algorithm: 'SHA-1', digits: 6, period: 30, steam: false } : null;
 }
 
-export async function generateTotp(params: TotpParams, nowMs: number = Date.now()): Promise<TotpCode> {
+export async function generateTotp(
+  params: TotpParams,
+  nowMs: number = Date.now(),
+): Promise<TotpCode> {
   const counter = Math.floor(nowMs / 1000 / params.period);
   const message = new Uint8Array(8);
   new DataView(message.buffer).setBigUint64(0, BigInt(counter));

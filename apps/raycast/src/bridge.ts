@@ -65,9 +65,7 @@ function requestThroughHost<T>(
           if (result.ok === true) entry.finish(undefined, result.value);
           else
             entry.finish(
-              new Error(
-                typeof result.error === 'string' ? result.error : 'Strongroom request failed.',
-              ),
+              new Error(typeof result.error === 'string' ? result.error : 'Strongroom request failed.'),
             );
         } catch {
           entry.finish(new Error('Invalid Strongroom response.'));

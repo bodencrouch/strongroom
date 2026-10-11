@@ -218,10 +218,9 @@ export class Vault extends EventEmitter {
         server,
       };
       try {
-        session = await this.cli.run(
-          ['unlock', '--passwordenv', 'STRONGROOM_MASTER_PASSWORD', '--raw'],
-          { password: input.password },
-        );
+        session = await this.cli.run(['unlock', '--passwordenv', 'STRONGROOM_MASTER_PASSWORD', '--raw'], {
+          password: input.password,
+        });
       } catch (error) {
         if (generation === this.generation) this.publish();
         throw error;

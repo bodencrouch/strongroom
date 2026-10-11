@@ -19,8 +19,23 @@ export interface HealthReport {
 }
 
 const COMMON = new Set([
-  'password', 'password1', 'passw0rd', '123456', '12345678', '123456789', 'qwerty', 'qwerty123',
-  'abc123', 'letmein', 'welcome', 'admin', 'iloveyou', 'monkey', 'dragon', 'football', '111111',
+  'password',
+  'password1',
+  'passw0rd',
+  '123456',
+  '12345678',
+  '123456789',
+  'qwerty',
+  'qwerty123',
+  'abc123',
+  'letmein',
+  'welcome',
+  'admin',
+  'iloveyou',
+  'monkey',
+  'dragon',
+  'football',
+  '111111',
 ]);
 
 export function weakReasons(password: string): WeakReason[] {
@@ -29,7 +44,10 @@ export function weakReasons(password: string): WeakReason[] {
   if (password.length < 10) out.push('short');
   const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((re) => re.test(password)).length;
   if (classes < 2) out.push('single-class');
-  if (password.length > 1 && new Set(password).size <= Math.max(2, Math.floor(password.length / 4))) {
+  if (
+    password.length > 1 &&
+    new Set(password).size <= Math.max(2, Math.floor(password.length / 4))
+  ) {
     out.push('repetitive');
   }
   if (hasSequence(password, 4)) out.push('sequential');
@@ -57,7 +75,12 @@ function isInsecure(uri: string): boolean {
   }
   if (url.protocol !== 'http:') return false;
   const host = url.hostname;
-  return !(host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host.endsWith('.localhost'));
+  return !(
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '[::1]' ||
+    host.endsWith('.localhost')
+  );
 }
 
 export function buildHealthReport(items: readonly HealthItem[]): HealthReport {
@@ -78,13 +101,18 @@ export function buildHealthReport(items: readonly HealthItem[]): HealthReport {
     }
   }
 
-  const reused = [...byPassword.values()].filter((ids) => ids.length > 1).map((itemIds) => ({ itemIds }));
+  const reused = [...byPassword.values()]
+    .filter((ids) => ids.length > 1)
+    .map((itemIds) => ({ itemIds }));
   return { reused, weak, insecureUris };
 }
 
 async function sha1Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
 }
 
 /**

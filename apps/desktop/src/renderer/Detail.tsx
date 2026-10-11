@@ -298,8 +298,7 @@ export function Detail({
             <Fingerprint />
             <AlertTitle>Passkey</AlertTitle>
             <AlertDescription>
-              Signs in through macOS AutoFill when Strongroom is unlocked. Edit or remove it in
-              Bitwarden.
+              Signs in through macOS AutoFill when Strongroom is unlocked. Edit or remove it in Bitwarden.
             </AlertDescription>
           </Alert>
         )}
