@@ -1,0 +1,78 @@
+/* Compact desktop metrics; palette is shared with browser surfaces. */
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-heading: var(--font-heading);
+  --font-mono: var(--font-code);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-selection: var(--selection);
+  --color-selection-inactive: var(--selection-inactive);
+  --color-window: var(--window);
+  --color-dialog-scrim: var(--dialog-scrim);
+  --color-switch-thumb: var(--switch-thumb);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-group);
+  --radius-xl: var(--radius-overlay);
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 13px;
+  --text-base--line-height: 18px;
+  --text-caption: 11px;
+  --text-caption--line-height: 15px;
+  --text-title: 20px;
+  --text-title--line-height: 26px;
+}
+
+:root {
+  --ring: var(--muted-foreground);
+  --sidebar-ring: var(--ring);
+  --sidebar-accent: var(--selection);
+  --sidebar-accent-foreground: var(--foreground);
+  --dialog-scrim: rgb(0 0 0 / 35%);
+  --sidebar-width: 188px;
+  --list-width: 288px;
+  --toolbar-height: 52px;
+}
+
+@media (max-width: 950px) {
+  :root {
+    --sidebar-width: 180px;
+    --list-width: 280px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dialog-scrim: rgb(0 0 0 / 50%);
+  }
+}

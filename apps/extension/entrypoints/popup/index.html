@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strongroom</title>
+  </head>
+  <body>
+    <header class="toolbar">
+      <span class="mark" aria-hidden="true"></span>
+      <strong>Strongroom</strong><span id="status" role="status">Connecting…</span>
+      <button
+        id="lock"
+        class="icon-button"
+        title="Lock vault"
+        aria-label="Lock vault"
+        hidden
+      ></button>
+      <button
+        id="open"
+        class="icon-button"
+        title="Open desktop app"
+        aria-label="Open desktop app"
+      ></button>
+    </header>
+    <main>
+      <section id="browser" hidden aria-label="Vault items">
+        <div class="search-wrap">
+          <span id="search-icon" aria-hidden="true"></span
+          ><input
+            id="search"
+            type="search"
+            placeholder="Search vault"
+            aria-label="Search vault"
+            maxlength="500"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="filters">
+          <div id="scopes" role="group" aria-label="Filter items">
+            <button data-scope="all" aria-pressed="true">All items</button
+            ><button data-scope="favorites" aria-pressed="false">Favorites</button
+            ><button data-scope="site" aria-pressed="false">This site</button
+            ><button data-scope="trash" aria-pressed="false">Trash</button>
+          </div>
+          <select id="item-type" aria-label="Item type">
+            <option value="all">All types</option>
+            <option value="login">Logins</option>
+            <option value="note">Secure notes</option>
+          </select>
+        </div>
+        <div class="list-heading">
+          <h1 id="list-title">All items</h1>
+          <button id="new-login">New login</button><button id="new-note">New note</button
+          ><span id="count" role="status"></span
+          ><button
+            id="refresh"
+            class="icon-button"
+            aria-label="Sync vault"
+            title="Sync vault"
+          ></button>
+        </div>
+        <div id="results" tabindex="-1" aria-label="Vault results"></div>
+      </section>
+      <section id="detail" hidden aria-label="Item details"></section>
+      <section id="empty" class="empty">
+        <span id="empty-icon" aria-hidden="true"></span>
+        <h1 id="empty-title">Connecting to Strongroom</h1>
+        <p id="empty-description">Your vault stays on your computer.</p>
+        <div id="unlock-form" hidden>
+          <button id="biometric-unlock" type="button" hidden>Unlock with Touch ID</button>
+          <button id="desktop-unlock" type="button">Open Strongroom to unlock</button>
+        </div>
+        <button id="connect" hidden>Open Strongroom</button>
+      </section>
+    </main>
+    <p id="message" role="status" aria-live="polite" hidden></p>
+    <footer>
+      <label><input type="checkbox" id="autofill" disabled /> Autofill on this site</label
+      ><span id="domain">Open a website</span>
+    </footer>
+    <script type="module" src="../../popup.ts"></script>
+  </body>
+</html>

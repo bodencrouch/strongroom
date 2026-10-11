@@ -1,0 +1,27 @@
+{
+  "name": "@strongroom/extension",
+  "version": "0.3.5",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt -b chrome",
+    "dev:firefox": "wxt -b firefox",
+    "build": "vp run build:chrome && vp run build:extras",
+    "build:chrome": "wxt build -b chrome",
+    "build:firefox": "wxt build -b firefox",
+    "build:safari": "wxt build -b safari",
+    "zip": "cd .. && cd .. && wxt zip apps/extension -b chrome && wxt zip apps/extension -b firefox && wxt zip apps/extension -b safari",
+    "typecheck": "wxt prepare && vp lint .",
+    "postinstall": "wxt prepare",
+    "submit": "wxt submit",
+    "build:extras": "vp run build:firefox && vp run build:safari"
+  },
+  "devDependencies": {
+    "@strongroom/shared": "workspace:*",
+    "@types/chrome": "^0.1.36",
+    "@types/node": "^24.0.0",
+    "wxt": "^0.21.4",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.0.0-rc.0"
+  },
+  "license": "MIT"
+}

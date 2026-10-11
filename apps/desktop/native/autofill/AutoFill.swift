@@ -1,0 +1,127 @@
+import AuthenticationServices
+import Foundation
+import LocalAuthentication
+import SafariServices
+
+// Runs inside Electron: Apple checks the containing app's bundle/entitlements.
+@_cdecl("strongroom_invoke")
+func invoke(
+  _ operation: UnsafePointer<CChar>, _ input: UnsafePointer<CChar>,
+  _ context: UnsafeMutableRawPointer?, _ reply: @escaping StrongroomReply
+) {
+  let operation = String(cString: operation)
+  let input = Data(String(cString: input).utf8)
+  let finish = Completion(context: context, reply: reply)
+  DispatchQueue.main.async {
+    if operation == "presence" {
+      guard let request = try? JSONSerialization.jsonObject(with: input) as? [String: String],
+        let reason = request["reason"], !reason.isEmpty, reason.count <= 300
+      else { finish(["ok": false]); return }
+      let context = LAContext()
+      context.touchIDAuthenticationAllowableReuseDuration = 0
+      context.evaluatePolicy(
+        .deviceOwnerAuthentication,
+        localizedReason: reason
+      ) { verified, _ in
+        finish(["ok": verified])
+      }
+      return
+    }
+    if operation == "settings" {
+      ASSettingsHelper.openCredentialProviderAppSettings { finish(["ok": $0 == nil]) }
+      return
+    }
+    if operation == "safariStatus" || operation == "safariSettings" {
+      guard let extensionURL = Bundle.main.builtInPlugInsURL?.appendingPathComponent("StrongroomSafari.appex"),
+        FileManager.default.fileExists(atPath: extensionURL.path)
+      else {
+        finish(["ok": operation == "safariStatus", "available": false, "enabled": false])
+        return
+      }
+      let identifier = "app.strongroom.vault.safari"
+      SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: identifier) { state, _ in
+        if operation == "safariStatus" {
+          finish(["ok": true, "available": state != nil, "enabled": state?.isEnabled ?? false])
+        } else if state != nil {
+          SFSafariApplication.showPreferencesForExtension(withIdentifier: identifier) {
+            finish(["ok": $0 == nil])
+          }
+        } else {
+          finish(["ok": false])
+        }
+      }
+      return
+    }
+    let bundle = Bundle.main
+    guard let task = SecTaskCreateFromSelf(nil),
+      SecTaskCopyValueForEntitlement(
+        task,
+        "com.apple.developer.authentication-services.autofill-credential-provider" as CFString, nil)
+        as? Bool == true,
+      let extensionURL = bundle.builtInPlugInsURL?.appendingPathComponent("StrongroomAutoFill.appex"),
+      FileManager.default.fileExists(atPath: extensionURL.path),
+      let group = bundle.object(forInfoDictionaryKey: "StrongroomAppGroup") as? String,
+      let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
+    else {
+      finish(["ok": true, "available": false, "enabled": false])
+      return
+    }
+    switch operation {
+    case "status":
+      ASCredentialIdentityStore.shared.getState {
+        finish([
+          "ok": true, "available": true, "enabled": $0.isEnabled, "container": container.path,
+        ])
+      }
+    case "enable":
+      if #available(macOS 15, *) {
+        ASSettingsHelper.requestToTurnOnCredentialProviderExtension {
+          finish(["ok": true, "enabled": $0])
+        }
+      } else {
+        ASSettingsHelper.openCredentialProviderAppSettings { finish(["ok": $0 == nil]) }
+      }
+    case "identities":
+      do {
+        let rows = try JSONDecoder().decode([Identity].self, from: input)
+        let identities = try rows.map { try $0.native() }
+        ASCredentialIdentityStore.shared.replaceCredentialIdentities(identities) { success, _ in
+          finish(["ok": success])
+        }
+      } catch { finish(["ok": false]) }
+    default: finish(["ok": false])
+    }
+  }
+}
+
+private struct Identity: Decodable {
+  let id: String
+  let kind, url, username, rpId, userName, credentialId, userHandle: String?
+
+  func native() throws -> any ASCredentialIdentity {
+    if kind == "passkey", let rpId, let userName, let credentialId, let userHandle,
+      let credential = Data(base64URL: credentialId), let handle = Data(base64URL: userHandle)
+    {
+      return ASPasskeyCredentialIdentity(
+        relyingPartyIdentifier: rpId, userName: userName,
+        credentialID: credential, userHandle: handle, recordIdentifier: id)
+    }
+    if kind != "passkey", let url, let username {
+      return ASPasswordCredentialIdentity(
+        serviceIdentifier: .init(identifier: url, type: .URL),
+        user: username, recordIdentifier: id)
+    }
+    throw CocoaError(.coderInvalidValue)
+  }
+}
+
+// Node-API's threadsafe function owns this context until its single completion.
+private struct Completion: @unchecked Sendable {
+  let context: UnsafeMutableRawPointer?
+  let reply: StrongroomReply
+
+  func callAsFunction(_ value: [String: Any]) {
+    let data = (try? JSONSerialization.data(withJSONObject: value)) ?? Data("{\"ok\":false}".utf8)
+    String(decoding: data, as: UTF8.self).withCString { reply(context, $0) }
+  }
+}

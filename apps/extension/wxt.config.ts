@@ -1,0 +1,80 @@
+import { defineConfig } from 'wxt';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { EXTENSION_MATCHES, FIREFOX_EXTENSION_ID } from '@strongroom/shared/browser-targets';
+const identity = JSON.parse(
+  readFileSync(new URL('../../packages/shared/extension.json', import.meta.url), 'utf8'),
+);
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+export default defineConfig({
+  imports: false,
+  vite: () => ({
+    // Keep native light-dark() so the inline picker can follow the page's color scheme.
+    build: { cssTarget: ['chrome123', 'firefox120', 'safari17.5'] },
+  }),
+  hooks: {
+    'build:publicAssets': (_wxt, files) => {
+      files.push({
+        absoluteSrc: fileURLToPath(new URL('../../LICENSE', import.meta.url)),
+        relativeDest: 'LICENSE',
+      });
+    },
+  },
+  zip: {
+    name: 'strongroom',
+    sourcesRoot: fileURLToPath(new URL('../..', import.meta.url)),
+    includeSources: [
+      'apps/extension/{content,popup}.ts',
+      'apps/extension/popup.css',
+      'apps/extension/{content,entrypoints}/**/*.{ts,css,html}',
+      'apps/extension/public/*.png',
+      'apps/extension/{package,tsconfig}.json',
+      'apps/extension/wxt.config.ts',
+      'packages/shared/src/*.{ts,css}',
+      'packages/shared/{package,extension,tsconfig}.json',
+      'apps/desktop/package.json',
+      'apps/raycast/package.json',
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+      'tsconfig.json',
+      'vite.config.mjs',
+      'LICENSE',
+      'README.md',
+    ],
+    excludeSources: ['**/node_modules/**', '**/.output/**', '**/.wxt/**'],
+  },
+  manifestVersion: 3,
+  manifest: ({ browser }) => ({
+    name: 'Strongroom — a modern, unofficial Bitwarden client',
+    version: pkg.version,
+    description:
+      'Search, filter, and copy from your Bitwarden vault, and fill logins with the Strongroom desktop app.',
+    ...(browser === 'chrome' || browser === 'edge' ? { key: identity.key } : {}),
+    permissions: ['nativeMessaging', 'activeTab', 'storage'],
+    host_permissions: EXTENSION_MATCHES,
+    action: {
+      default_title: 'Strongroom',
+      default_icon: {
+        16: 'icon-16.png',
+        32: 'icon-32.png',
+        48: 'icon-48.png',
+        128: 'icon-128.png',
+      },
+    },
+    content_security_policy: {
+      extension_pages: "script-src 'self'; object-src 'none'; base-uri 'none'",
+    },
+    ...(browser === 'firefox'
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: FIREFOX_EXTENSION_ID,
+              strict_min_version: '140.0',
+              data_collection_permissions: { required: ['authenticationInfo', 'browsingActivity'] },
+            },
+          },
+        }
+      : {}),
+  }),
+});

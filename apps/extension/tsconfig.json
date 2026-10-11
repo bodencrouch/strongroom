@@ -1,0 +1,4 @@
+{
+  "extends": ["../../tsconfig.json", "./.wxt/tsconfig.json"],
+  "include": ["entrypoints", "content", "content.ts", "popup.ts", "wxt.config.ts", ".wxt/wxt.d.ts"]
+}

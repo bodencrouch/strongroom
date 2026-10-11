@@ -1,0 +1,51 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "strongroom",
+  "title": "Strongroom",
+  "description": "Unlock and search your Strongroom logins and secure notes.",
+  "icon": "icon.png",
+  "author": "Strongroom contributors",
+  "license": "MIT",
+  "private": true,
+  "platforms": [
+    "macOS"
+  ],
+  "categories": [
+    "Productivity",
+    "Security"
+  ],
+  "commands": [
+    {
+      "name": "search",
+      "title": "Search Vault",
+      "subtitle": "Strongroom",
+      "description": "Unlock Strongroom, browse item details, and copy login fields or secure notes.",
+      "mode": "view"
+    },
+    {
+      "name": "lock",
+      "title": "Lock Vault",
+      "subtitle": "Strongroom",
+      "description": "Lock Strongroom immediately.",
+      "mode": "no-view"
+    }
+  ],
+  "scripts": {
+    "dev": "ray develop",
+    "build": "ray build -o dist",
+    "typecheck": "vp lint src",
+    "lint": "ray lint"
+  },
+  "dependencies": {
+    "@raycast/api": "2.6.0",
+    "@strongroom/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.17",
+    "@types/react": "19.0.10",
+    "@raycast/eslint-config": "2.2.0",
+    "eslint": "10.11.0",
+    "prettier": "3.9.9",
+    "typescript": "5.9.3"
+  }
+}
