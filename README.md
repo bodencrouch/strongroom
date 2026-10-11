@@ -43,3 +43,5 @@ node apps/cli/src/index.ts send ./notes.txt --days 3
 ## License
 
 [MIT](LICENSE). The license keeps the notices of the code Strongroom started from.
+
+The passphrase generator uses the [EFF large word list](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases), copyright the Electronic Frontier Foundation, licensed [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/).

@@ -12,6 +12,7 @@
     "./urls": "./src/urls.ts",
     "./totp": "./src/totp.ts",
     "./health": "./src/health.ts",
+    "./generator": "./src/generator.ts",
     "./theme.css": "./src/theme.css",
     "./extension.json": "./extension.json"
   },
