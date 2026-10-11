@@ -13,6 +13,7 @@ import {
 import { uriMatchOptions } from '@strongroom/shared/item-drafts';
 import type { ItemDetail } from '@strongroom/shared/types';
 import { ItemIcon, displayWebsite, typeName } from './items';
+import { TotpRow } from './TotpRow';
 import type { Notifier } from './Toasts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -270,6 +271,7 @@ export function Detail({
                     </Button>
                   </div>
                 </div>
+                <TotpRow itemId={item.id} disabled={deleting} />
               </>
             )}
             {item.uris.map((row) => (

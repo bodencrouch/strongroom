@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { CodeRejectedError, type CliPort, type CliPrompt } from './cli';
 import { fillableUrl, matchesUri, normalizeServer, webUrl, type CipherUri } from './matching';
 import { UserError, type BrowserVaultQuery } from '@strongroom/shared/protocol';
+import { totpFromField, type TotpCode } from '@strongroom/shared/totp';
 import {
   ES256,
   attestationObject,
@@ -48,6 +49,7 @@ export interface Cipher {
   login?: {
     username?: string | null;
     password?: string | null;
+    totp?: string | null;
     uris?: CipherUri[];
     fido2Credentials?: Fido2Credential[];
     [key: string]: unknown;
@@ -541,6 +543,17 @@ export class Vault extends EventEmitter {
       deletable: isRemovable(cipher) && !cipher.deletedDate,
       restorable: isRemovable(cipher) && Boolean(cipher.deletedDate),
     };
+  }
+
+  /**
+   * Current one-time code for a login, computed here so the stored secret never
+   * reaches the window. Returns null when the item has no usable secret.
+   */
+  async totp(id: string): Promise<TotpCode | null> {
+    const cipher = this.item(id);
+    if (isRestricted(cipher)) return null;
+    const secret = cipher.login?.totp;
+    return secret ? totpFromField(secret) : null;
   }
 
   /** Moves an item to Bitwarden's trash, where it can still be restored. */

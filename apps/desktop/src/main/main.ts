@@ -295,6 +295,8 @@ async function handleRequest(request: DesktopRequest): Promise<unknown> {
       return vault.trash();
     case 'detail':
       return vault.detail(request.id);
+    case 'totp':
+      return vault.totp(request.id);
     case 'generate':
       return generatePassword(request.options);
     case 'browserSetup':

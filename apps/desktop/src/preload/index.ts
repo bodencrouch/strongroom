@@ -27,6 +27,7 @@ const api: StrongroomApi = {
   items: () => request({ type: 'items' }),
   trash: () => request({ type: 'trash' }),
   detail: (id) => request({ type: 'detail', id }),
+  totp: (id) => request({ type: 'totp', id }),
   save: (draft) => request({ type: 'save', draft }),
   setFavorite: (id, favorite) => request({ type: 'setFavorite', id, favorite }),
   remove: (id) => request({ type: 'delete', id }),

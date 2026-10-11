@@ -1,3 +1,4 @@
+import type { TotpCode } from './totp';
 export const MAX_BROWSER_MESSAGE_BYTES = 900_000;
 
 export type WindowMaterial = 'glass' | 'vibrancy' | 'solid';
@@ -223,6 +224,7 @@ export interface StrongroomApi {
   sync(): Promise<Result<VaultState>>;
   items(): Promise<Result<ItemSummary[]>>;
   trash(): Promise<Result<ItemSummary[]>>;
+  totp(id: string): Promise<Result<TotpCode | null>>;
   detail(id: string): Promise<Result<ItemDetail>>;
   save(draft: ItemDraft): Promise<Result<ItemDetail>>;
   setFavorite(id: string, favorite: boolean): Promise<Result<ItemSummary>>;
