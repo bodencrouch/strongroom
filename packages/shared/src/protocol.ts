@@ -35,12 +35,14 @@ const challengeAnswer = z.union([
 ]);
 const id = z.string().uuid();
 export const browserSaveResultSchema = z.object({ id });
+const folderName = z.string().trim().min(1).max(500);
 const draftBase = {
   id: id.optional(),
   revisionDate: z.string().nullable().optional(),
   name: z.string().trim().min(1).max(500),
   notes: z.string().max(100_000),
   favorite: z.boolean(),
+  folderId: id.nullable().optional(),
 };
 const sourceIndex = z.number().int().min(0).max(100_000);
 export const uriMatchSchema = z.union([z.null(), z.literal([0, 1, 2, 3, 5])]);
@@ -83,7 +85,9 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('websiteIcon'), id }).strict(),
   z.object({ type: z.literal('state') }).strict(),
   z.object({ type: z.literal('appearance') }).strict(),
-  z.object({ type: z.literal('confirm'), action: z.enum(['discard', 'trash']) }).strict(),
+  z
+    .object({ type: z.literal('confirm'), action: z.enum(['discard', 'trash', 'deleteFolder']) })
+    .strict(),
   z
     .object({
       type: z.literal('itemMenu'),
@@ -120,6 +124,10 @@ export const desktopRequestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('commitCapture'), url: z.string().max(4_096) }).strict(),
   z.object({ type: z.literal('items') }).strict(),
   z.object({ type: z.literal('trash') }).strict(),
+  z.object({ type: z.literal('folders') }).strict(),
+  z.object({ type: z.literal('createFolder'), name: folderName }).strict(),
+  z.object({ type: z.literal('renameFolder'), id, name: folderName }).strict(),
+  z.object({ type: z.literal('deleteFolder'), id }).strict(),
   z.object({ type: z.literal('detail'), id }).strict(),
   z.object({ type: z.literal('totp'), id }).strict(),
   z.object({ type: z.literal('health'), breaches: z.boolean() }).strict(),

@@ -293,6 +293,8 @@ async function handleRequest(request: DesktopRequest): Promise<unknown> {
       return vault.items();
     case 'trash':
       return vault.trash();
+    case 'folders':
+      return vault.folders();
     case 'detail':
       return vault.detail(request.id);
     case 'totp':
@@ -335,6 +337,9 @@ async function mutateVault(
         | 'setFavorite'
         | 'delete'
         | 'restore'
+        | 'createFolder'
+        | 'renameFolder'
+        | 'deleteFolder'
         | 'biometricUnlock'
         | 'setBiometrics';
     }
@@ -370,6 +375,12 @@ async function mutateVault(
         return await vault.remove(request.id);
       case 'restore':
         return await vault.restore(request.id);
+      case 'createFolder':
+        return await vault.createFolder(request.name);
+      case 'renameFolder':
+        return await vault.renameFolder(request.id, request.name);
+      case 'deleteFolder':
+        return await vault.deleteFolder(request.id);
     }
   } finally {
     busy = false;

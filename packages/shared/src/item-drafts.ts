@@ -24,6 +24,7 @@ export function itemDraft(item: ItemDetail): ItemDraft {
     name: item.name,
     notes: item.notes,
     favorite: item.favorite,
+    folderId: item.folderId,
   };
   if (item.type === 2) return { ...base, type: 2 };
   return {

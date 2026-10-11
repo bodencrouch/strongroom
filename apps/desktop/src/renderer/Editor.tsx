@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Check, Eye, EyeSlash as EyeOff, X } from '@phosphor-icons/react';
-import type { ItemDetail, ItemDraft, UriDraft } from '@strongroom/shared/types';
+import type { Folder, ItemDetail, ItemDraft, UriDraft } from '@strongroom/shared/types';
 import { itemDraft, uriMatchOptions } from '@strongroom/shared/item-drafts';
 import { uriMatchSchema } from '@strongroom/shared/protocol';
 import type { Notifier } from './Toasts';
@@ -29,11 +29,16 @@ import './tasks.css';
 
 export function Editor({
   item,
+  folders,
+  defaultFolderId,
   onClose,
   onSaved,
   notify,
 }: {
   item: ItemDetail | null;
+  folders: Folder[];
+  /** The folder a new item starts in. */
+  defaultFolderId: string | null;
   onClose: () => void;
   onSaved: (item: ItemDetail) => void;
   notify: Notifier;
@@ -41,7 +46,16 @@ export function Editor({
   const [initial] = useState<ItemDraft>(() =>
     item
       ? itemDraft(item)
-      : { type: 1, name: '', username: '', password: '', uris: [], notes: '', favorite: false },
+      : {
+          type: 1,
+          name: '',
+          username: '',
+          password: '',
+          uris: [],
+          notes: '',
+          favorite: false,
+          folderId: defaultFolderId,
+        },
   );
   const [draft, setDraft] = useState(initial);
   const isNote = draft.type === 2;
@@ -224,6 +238,7 @@ export function Editor({
                           name: draft.name,
                           notes: draft.notes,
                           favorite: draft.favorite,
+                          folderId: draft.folderId,
                         });
                       else
                         setDraft({
@@ -231,6 +246,7 @@ export function Editor({
                           name: draft.name,
                           notes: draft.notes,
                           favorite: draft.favorite,
+                          folderId: draft.folderId,
                           username: '',
                           password: '',
                           uris: [],
@@ -253,6 +269,24 @@ export function Editor({
                   maxLength={500}
                   disabled={busy}
                 />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="editor-folder">Folder</FieldLabel>
+                <select
+                  id="editor-folder"
+                  value={draft.folderId ?? ''}
+                  disabled={busy}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, folderId: event.target.value || null }))
+                  }
+                >
+                  <option value="">No folder</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
               </Field>
               {!isNote && (
                 <>

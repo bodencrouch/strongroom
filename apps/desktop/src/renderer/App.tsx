@@ -4,6 +4,8 @@ import {
   WarningCircle as AlertCircle,
   FileText,
   Fingerprint,
+  FolderSimple,
+  PencilSimple,
   Vault as FolderKey,
   Key as KeyRound,
   LockKey as LockKeyhole,
@@ -15,7 +17,7 @@ import {
   Trash as Trash2,
   X,
 } from '@phosphor-icons/react';
-import type { ItemDetail, ItemSummary, MenuPosition, VaultState } from '@strongroom/shared/types';
+import type { Folder, ItemDetail, ItemSummary, MenuPosition, VaultState } from '@strongroom/shared/types';
 import { Auth } from './Auth';
 import { Editor } from './Editor';
 import { Settings } from './Settings';
@@ -26,6 +28,7 @@ import { QuickOpen } from './QuickOpen';
 import { WebsiteIconsProvider } from './WebsiteIcons';
 import { Toasts, useToasts, type Notifier } from './Toasts';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   InputGroup,
   InputGroupAddon,
@@ -60,7 +63,16 @@ const initialState: VaultState = {
   biometrics: 'unsupported',
   biometricsOn: false,
 };
-type Filter = 'all' | 'favorites' | 'logins' | 'notes' | 'passkeys' | 'trash';
+type Filter =
+  | 'all'
+  | 'favorites'
+  | 'logins'
+  | 'notes'
+  | 'passkeys'
+  | 'trash'
+  | 'nofolder'
+  | `folder:${string}`;
+type FolderEdit = { mode: 'create' } | { mode: 'rename'; folder: Folder } | null;
 type Selection =
   | { status: 'unselected' }
   | { status: 'loading' | 'restricted' | 'error'; id: string }
@@ -225,6 +237,12 @@ function VaultWorkspace({
 }) {
   const [items, setItems] = useState<ItemSummary[]>([]);
   const [trashed, setTrashed] = useState<ItemSummary[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [foldersLoaded, setFoldersLoaded] = useState(false);
+  const [folderEdit, setFolderEdit] = useState<FolderEdit>(null);
+  const [folderBusy, setFolderBusy] = useState(false);
+  const folderWorking = useRef(false);
+  const folderVersion = useRef(0);
   const [selection, setSelection] = useState<Selection>({ status: 'unselected' });
   const selected = selection.status === 'ready' ? selection.item : null;
   const selectedId =
@@ -295,6 +313,34 @@ function VaultWorkspace({
       ++listVersion.current;
     };
   }, [state.itemsRevision]);
+
+  const loadFolders = useCallback(async () => {
+    const version = ++folderVersion.current;
+    try {
+      const listed = await window.strongroom.folders();
+      if (!alive.current || version !== folderVersion.current) return;
+      if (listed.ok) {
+        setFolders(listed.value);
+        setFoldersLoaded(true);
+      }
+    } catch {
+      // Keep the folders already shown; the next sync retries.
+    }
+  }, []);
+  useEffect(() => {
+    void loadFolders();
+    return () => {
+      ++folderVersion.current;
+    };
+  }, [loadFolders, state.itemsRevision]);
+  useEffect(() => {
+    if (
+      foldersLoaded &&
+      filter.startsWith('folder:') &&
+      !folders.some((f) => `folder:${f.id}` === filter)
+    )
+      setFilter('all');
+  }, [foldersLoaded, folders, filter]);
 
   useEffect(() => {
     if (filter !== 'trash') return;
@@ -372,10 +418,21 @@ function VaultWorkspace({
         if (filter === 'logins' && item.type !== 1) return false;
         if (filter === 'notes' && item.type !== 2) return false;
         if (filter === 'passkeys' && !item.hasPasskey) return false;
+        if (filter === 'nofolder' && item.folderId) return false;
+        if (filter.startsWith('folder:') && item.folderId !== filter.slice(7)) return false;
         return terms.every((term) => haystack.includes(term));
       })
       .map(({ item }) => item);
   }, [indexed, indexedTrash, query, filter]);
+  const folderCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    let none = 0;
+    for (const item of items) {
+      if (item.folderId) counts.set(item.folderId, (counts.get(item.folderId) ?? 0) + 1);
+      else none++;
+    }
+    return { counts, none };
+  }, [items]);
   const selectionVisible = !!selectedId && visible.some((item) => item.id === selectedId);
 
   useLayoutEffect(() => {
@@ -545,7 +602,83 @@ function VaultWorkspace({
     }
   }
 
-  const currentFilter = filters.find((entry) => entry.id === filter)!;
+  async function submitFolder(name: string) {
+    if (!alive.current || folderWorking.current || !folderEdit) return;
+    const edit = folderEdit;
+    folderWorking.current = true;
+    setFolderBusy(true);
+    try {
+      const result =
+        edit.mode === 'create'
+          ? await window.strongroom.createFolder(name)
+          : await window.strongroom.renameFolder(edit.folder.id, name);
+      if (!alive.current) return;
+      if (result.ok) {
+        setFolderEdit(null);
+        void loadFolders();
+      } else notify.show('error', result.error);
+    } catch {
+      notify.show('error', 'Could not save the folder. Try again.');
+    } finally {
+      folderWorking.current = false;
+      if (alive.current) setFolderBusy(false);
+    }
+  }
+
+  async function removeFolder(folder: Folder) {
+    if (!alive.current || folderWorking.current || modal || hasModal()) return;
+    folderWorking.current = true;
+    setFolderBusy(true);
+    let pending: ReturnType<Notifier['show']> | undefined;
+    try {
+      const confirmation = await window.strongroom.confirm('deleteFolder');
+      if (!alive.current) return;
+      if (!confirmation.ok) {
+        notify.show('error', confirmation.error);
+        return;
+      }
+      if (!confirmation.value) return;
+      pending = notify.show('pending', 'Deleting folder…');
+      const result = await window.strongroom.deleteFolder(folder.id);
+      if (!alive.current) return;
+      notify.settle(
+        pending,
+        result.ok ? 'done' : 'error',
+        result.ok ? 'Folder deleted' : result.error,
+      );
+      if (result.ok) {
+        if (filter === `folder:${folder.id}`) setFilter('all');
+        void loadFolders();
+      }
+    } catch {
+      if (alive.current) {
+        if (pending) notify.settle(pending, 'error', 'Could not delete the folder.');
+        else notify.show('error', 'Could not delete the folder. Try again.');
+      }
+    } finally {
+      folderWorking.current = false;
+      if (alive.current) setFolderBusy(false);
+    }
+  }
+
+  const activeFolder = filter.startsWith('folder:')
+    ? folders.find((entry) => `folder:${entry.id}` === filter)
+    : undefined;
+  const currentFilter: { label: string; empty?: string; description?: string } =
+    filter === 'nofolder'
+      ? {
+          label: 'No folder',
+          empty: 'No unfiled items',
+          description: 'Items that are not in a folder appear here.',
+        }
+      : activeFolder
+        ? {
+            label: activeFolder.name,
+            empty: 'This folder is empty',
+            description: 'Choose this folder when you add or edit an item.',
+          }
+        : (filters.find((entry) => entry.id === filter) ?? filters[0]);
+  const newItemFolder = activeFolder ? activeFolder.id : null;
   const activeDetail = selectionVisible ? selection.status : 'unselected';
   const currentListError = filter === 'trash' ? listError.trash : listError.all;
   return (
@@ -587,6 +720,94 @@ function VaultWorkspace({
                   )}
                 </Button>
               ))}
+            </nav>
+            <nav className="folder-nav" aria-label="Folders">
+              <div className="nav-heading">
+                <span>Folders</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="New folder"
+                      disabled={folderBusy}
+                      onClick={() => setFolderEdit({ mode: 'create' })}
+                    >
+                      <Plus size={14} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>New folder</TooltipContent>
+                </Tooltip>
+              </div>
+              {folderEdit?.mode === 'create' && (
+                <FolderForm
+                  label="New folder name"
+                  initial=""
+                  busy={folderBusy}
+                  onSubmit={(name) => void submitFolder(name)}
+                  onCancel={() => setFolderEdit(null)}
+                />
+              )}
+              {folders.map((folder) =>
+                folderEdit?.mode === 'rename' && folderEdit.folder.id === folder.id ? (
+                  <FolderForm
+                    key={folder.id}
+                    label="Folder name"
+                    initial={folder.name}
+                    busy={folderBusy}
+                    onSubmit={(name) => void submitFolder(name)}
+                    onCancel={() => setFolderEdit(null)}
+                  />
+                ) : (
+                  <div className="folder-row" key={folder.id}>
+                    <Button
+                      type="button"
+                      variant="sidebar"
+                      className={`nav-item ${filter === `folder:${folder.id}` ? 'active' : ''}`}
+                      aria-pressed={filter === `folder:${folder.id}`}
+                      onClick={() => setFilter(`folder:${folder.id}`)}
+                    >
+                      <FolderSimple size={16} />
+                      <span title={folder.name}>{folder.name}</span>
+                      <small>{(folderCounts.counts.get(folder.id) ?? 0).toLocaleString()}</small>
+                    </Button>
+                    <div className="folder-actions">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Rename ${folder.name}`}
+                        disabled={folderBusy}
+                        onClick={() => setFolderEdit({ mode: 'rename', folder })}
+                      >
+                        <PencilSimple size={13} />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Delete ${folder.name}`}
+                        disabled={folderBusy}
+                        onClick={() => void removeFolder(folder)}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </div>
+                  </div>
+                ),
+              )}
+              <Button
+                type="button"
+                variant="sidebar"
+                className={`nav-item ${filter === 'nofolder' ? 'active' : ''}`}
+                aria-pressed={filter === 'nofolder'}
+                onClick={() => setFilter('nofolder')}
+              >
+                <FolderSimple size={16} />
+                <span>No folder</span>
+                <small>{folderCounts.none.toLocaleString()}</small>
+              </Button>
             </nav>
             <div className="sidebar-bottom">
               <Separator />
@@ -814,6 +1035,8 @@ function VaultWorkspace({
         {(modal === 'new' || modal === 'edit') && (
           <Editor
             item={modal === 'edit' ? selected : null}
+            folders={folders}
+            defaultFolderId={newItemFolder}
             onClose={() => {
               if (alive.current) setModal(null);
             }}
@@ -823,10 +1046,20 @@ function VaultWorkspace({
               setModal(null);
               // Keep summaries secret-free, including the newly created item while
               // its broadcast list refresh is still in flight.
-              const { id, name, username, website, type, favorite, hasPasskey, restricted } = item;
+              const {
+                id,
+                name,
+                username,
+                website,
+                type,
+                favorite,
+                hasPasskey,
+                restricted,
+                folderId,
+              } = item;
               setItems((current) => [
                 ...current.filter((entry) => entry.id !== id),
-                { id, name, username, website, type, favorite, hasPasskey, restricted },
+                { id, name, username, website, type, favorite, hasPasskey, restricted, folderId },
               ]);
               setQuery('');
               setFilter('all');
@@ -850,5 +1083,51 @@ function VaultWorkspace({
         <Toasts />
       </div>
     </TooltipProvider>
+  );
+}
+
+function FolderForm({
+  label,
+  initial,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  label: string;
+  initial: string;
+  busy: boolean;
+  onSubmit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initial);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    input.current?.focus();
+    input.current?.select();
+  }, []);
+  return (
+    <form
+      className="folder-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const trimmed = name.trim();
+        if (trimmed && !busy) onSubmit(trimmed);
+      }}
+    >
+      <Input
+        ref={input}
+        aria-label={label}
+        value={name}
+        maxLength={500}
+        disabled={busy}
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Escape') return;
+          event.preventDefault();
+          event.stopPropagation();
+          onCancel();
+        }}
+      />
+    </form>
   );
 }

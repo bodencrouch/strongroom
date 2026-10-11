@@ -104,6 +104,41 @@
   color: inherit;
   opacity: 0.8;
 }
+.vault-app .folder-nav {
+  display: grid;
+  gap: 2px;
+  margin-top: 12px;
+}
+.vault-app .nav-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.vault-app .folder-row {
+  position: relative;
+}
+.vault-app .folder-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: none;
+  gap: 2px;
+}
+.vault-app .folder-row:hover .folder-actions,
+.vault-app .folder-row:focus-within .folder-actions {
+  display: flex;
+}
+.vault-app .folder-row:hover small,
+.vault-app .folder-row:focus-within small {
+  visibility: hidden;
+}
+.vault-app .folder-form {
+  padding: 0 2px;
+}
 .vault-app .sidebar-bottom {
   display: grid;
   gap: 4px;

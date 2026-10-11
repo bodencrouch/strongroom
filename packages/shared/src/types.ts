@@ -3,7 +3,7 @@ export const MAX_BROWSER_MESSAGE_BYTES = 900_000;
 
 export type WindowMaterial = 'glass' | 'vibrancy' | 'solid';
 export type WindowCommand = 'search' | 'new' | 'settings';
-export type NativeConfirmation = 'discard' | 'trash';
+export type NativeConfirmation = 'discard' | 'trash' | 'deleteFolder';
 export type ItemMenuAction = 'copyUsername' | 'copyPassword' | 'edit' | 'trash' | 'restore';
 export type MenuPosition = { x: number; y: number };
 export const windowColorTokens = [
@@ -118,6 +118,14 @@ export interface ItemSummary {
   favorite: boolean;
   hasPasskey: boolean;
   restricted: boolean;
+  /** The folder this item is filed in; null means no folder. */
+  folderId: string | null;
+}
+
+/** A Bitwarden folder. */
+export interface Folder {
+  id: string;
+  name: string;
 }
 
 /** A read-only field on a card, identity or SSH key. */
@@ -157,6 +165,8 @@ export type ItemDraft = {
   name: string;
   notes: string;
   favorite: boolean;
+  /** Omitted: keep the current folder (edits) or use no folder (new items). */
+  folderId?: string | null;
 } & ({ type: 1; username: string; password: string; uris: UriDraft[] } | { type: 2 });
 
 export interface FillCredential {
@@ -242,6 +252,10 @@ export interface StrongroomApi {
   sync(): Promise<Result<VaultState>>;
   items(): Promise<Result<ItemSummary[]>>;
   trash(): Promise<Result<ItemSummary[]>>;
+  folders(): Promise<Result<Folder[]>>;
+  createFolder(name: string): Promise<Result<Folder>>;
+  renameFolder(id: string, name: string): Promise<Result<Folder>>;
+  deleteFolder(id: string): Promise<Result<VaultState>>;
   totp(id: string): Promise<Result<TotpCode | null>>;
   health(breaches: boolean): Promise<Result<HealthSummary>>;
   detail(id: string): Promise<Result<ItemDetail>>;

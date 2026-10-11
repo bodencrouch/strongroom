@@ -100,13 +100,24 @@ export function installNativeInteractions(window: BrowserWindow) {
       confirmation = controller;
       try {
         const trash = action === 'trash';
+        const folder = action === 'deleteFolder';
         const result = await dialog.showMessageBox(window, {
           type: 'warning',
-          message: trash ? 'Move this item to Trash?' : 'Discard changes?',
-          detail: trash
-            ? 'You can restore it from Trash. This does not delete it permanently.'
-            : 'Your unsaved changes will be lost.',
-          buttons: trash ? ['Cancel', 'Move to Trash'] : ['Keep editing', 'Discard changes'],
+          message: folder
+            ? 'Delete this folder?'
+            : trash
+              ? 'Move this item to Trash?'
+              : 'Discard changes?',
+          detail: folder
+            ? 'Items in this folder move to No folder. They are not deleted.'
+            : trash
+              ? 'You can restore it from Trash. This does not delete it permanently.'
+              : 'Your unsaved changes will be lost.',
+          buttons: folder
+            ? ['Cancel', 'Delete folder']
+            : trash
+              ? ['Cancel', 'Move to Trash']
+              : ['Keep editing', 'Discard changes'],
           defaultId: 0,
           cancelId: 0,
           noLink: true,

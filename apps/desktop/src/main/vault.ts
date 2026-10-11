@@ -32,6 +32,7 @@ import type {
   CaptureOffer,
   ChallengeAnswer,
   ExtraField,
+  Folder,
   HealthSummary,
   ItemDetail,
   ItemSummary,
@@ -48,6 +49,7 @@ export interface Cipher {
   name: string;
   type: number;
   favorite?: boolean;
+  folderId?: string | null;
   organizationId?: string | null;
   deletedDate?: string | null;
   reprompt?: number;
@@ -130,6 +132,7 @@ export interface PasswordIdentity {
 export class Vault extends EventEmitter {
   private session = '';
   private ciphers = new Map<string, Cipher>();
+  private folderNames = new Map<string, string>();
   private generation = 0;
   private revision = 0;
   private itemsRevision = 0;
@@ -438,6 +441,7 @@ export class Vault extends EventEmitter {
     if (!locking) this.cli.cancel();
     this.session = '';
     this.ciphers.clear();
+    this.folderNames.clear();
     this.trashLoaded = false;
     this.trashLoading = undefined;
     this.captured = undefined;
@@ -488,6 +492,58 @@ export class Vault extends EventEmitter {
   items(): ItemSummary[] {
     this.requireUnlocked();
     return this.listing((cipher) => !cipher.deletedDate);
+  }
+
+  /** Folders, sorted by name. The "No Folder" placeholder the CLI lists has no id and is omitted. */
+  folders(): Folder[] {
+    this.requireUnlocked();
+    return [...this.folderNames]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createFolder(name: string): Promise<Folder> {
+    this.requireUnlocked();
+    const generation = this.generation;
+    const payload = Buffer.from(JSON.stringify({ name })).toString('base64');
+    const saved = parseFolder(
+      await this.cli.run(['create', 'folder'], { session: this.session, input: payload }),
+    );
+    this.assertGeneration(generation);
+    this.folderNames.set(saved.id, saved.name);
+    this.countItems();
+    this.publish();
+    return saved;
+  }
+
+  async renameFolder(id: string, name: string): Promise<Folder> {
+    this.requireUnlocked();
+    const generation = this.generation;
+    if (!this.folderNames.has(id))
+      throw new UserError('This folder is no longer available. Sync your vault.');
+    const payload = Buffer.from(JSON.stringify({ name })).toString('base64');
+    const saved = parseFolder(
+      await this.cli.run(['edit', 'folder', id], { session: this.session, input: payload }),
+    );
+    this.assertGeneration(generation);
+    this.folderNames.set(saved.id, saved.name);
+    this.countItems();
+    this.publish();
+    return saved;
+  }
+
+  /** Bitwarden moves the folder's items to "No folder"; none are deleted. */
+  async deleteFolder(id: string) {
+    this.requireUnlocked();
+    const generation = this.generation;
+    if (!this.folderNames.has(id))
+      throw new UserError('This folder is no longer available. Sync your vault.');
+    await this.cli.run(['delete', 'folder', id], { session: this.session });
+    this.assertGeneration(generation);
+    this.folderNames.delete(id);
+    for (const cipher of this.ciphers.values()) if (cipher.folderId === id) cipher.folderId = null;
+    this.countItems();
+    return this.publish();
   }
 
   /** Items sitting in Bitwarden's trash, which another client can restore. */
@@ -1086,6 +1142,11 @@ export class Vault extends EventEmitter {
       };
     }
     this.assertGeneration(generation);
+    if (draft.folderId !== undefined) {
+      if (draft.folderId !== null && !this.folderNames.has(draft.folderId))
+        throw new UserError('That folder no longer exists. Pick another folder and try again.');
+      cipher.folderId = draft.folderId;
+    }
     Object.assign(cipher, {
       name: draft.name,
       notes: draft.notes || null,
@@ -1136,6 +1197,13 @@ export class Vault extends EventEmitter {
         await this.cli.run(['list', 'items'], { session: this.session }),
       ) as Cipher[];
       this.assertGeneration(generation);
+      const folders = JSON.parse(
+        await this.cli.run(['list', 'folders'], { session: this.session }),
+      ) as { id: string | null; name: string }[];
+      this.assertGeneration(generation);
+      this.folderNames = new Map(
+        folders.flatMap((folder) => (folder.id ? [[folder.id, folder.name] as const] : [])),
+      );
       this.trashLoaded = false;
       this.trashLoading = undefined;
       this.ciphers = new Map(
@@ -1148,6 +1216,7 @@ export class Vault extends EventEmitter {
         this.cli.cancel();
         this.session = '';
         this.ciphers.clear();
+        this.folderNames.clear();
         this.trashLoaded = false;
         this.trashLoading = undefined;
         this.state.status = 'locked';
@@ -1192,6 +1261,7 @@ function cacheFields(cipher: Cipher): Cipher {
     name: cipher.name,
     type: cipher.type,
     favorite: cipher.favorite,
+    folderId: cipher.folderId ?? null,
     organizationId: cipher.organizationId,
     reprompt: cipher.reprompt,
     revisionDate: cipher.revisionDate,
@@ -1300,7 +1370,15 @@ function summarize(cipher: Cipher): ItemSummary {
     favorite: Boolean(cipher.favorite),
     hasPasskey: Boolean(cipher.login?.fido2Credentials?.length),
     restricted: isRestricted(cipher),
+    folderId: cipher.folderId ?? null,
   };
+}
+
+function parseFolder(output: string): Folder {
+  const folder = JSON.parse(output) as Partial<Folder>;
+  if (typeof folder.id !== 'string' || typeof folder.name !== 'string')
+    throw new UserError('Bitwarden returned an unexpected reply. Sync your vault and try again.');
+  return { id: folder.id, name: folder.name };
 }
 
 export function generatePassword(options: PasswordOptions) {
