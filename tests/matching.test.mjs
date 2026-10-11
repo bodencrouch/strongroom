@@ -22,32 +22,32 @@ for (const match of siteModes) {
   void describe(`hostname and port matching, mode ${match}`, () => {
     cases(
       [
-        ['NAS without a port', 'skynet.local', 'https://skynet.local:5001/', true],
-        ['NAS with scheme but no port', 'https://skynet.local', 'https://skynet.local:5001/', true],
-        ['NAS with matching port', 'skynet.local:5001', 'https://skynet.local:5001/', true],
-        ['NAS with different port', 'skynet.local:5000', 'https://skynet.local:5001/', false],
+        ['NAS without a port', 'nas.local', 'https://nas.local:5001/', true],
+        ['NAS with scheme but no port', 'https://nas.local', 'https://nas.local:5001/', true],
+        ['NAS with matching port', 'nas.local:5001', 'https://nas.local:5001/', true],
+        ['NAS with different port', 'nas.local:5000', 'https://nas.local:5001/', false],
         [
           'explicit default port stays restrictive',
-          'https://skynet.local:443',
-          'https://skynet.local:5001/',
+          'https://nas.local:443',
+          'https://nas.local:5001/',
           false,
         ],
         [
           'explicit default port matches implicit default',
-          'https://skynet.local:443',
-          'https://skynet.local/',
+          'https://nas.local:443',
+          'https://nas.local/',
           true,
         ],
         [
           'zero padded explicit default port',
-          'https://skynet.local:00443',
-          'https://skynet.local/',
+          'https://nas.local:00443',
+          'https://nas.local/',
           true,
         ],
         [
           'explicit nondefault port rejects default',
-          'https://skynet.local:5001',
-          'https://skynet.local/',
+          'https://nas.local:5001',
+          'https://nas.local/',
           false,
         ],
         [
@@ -72,25 +72,25 @@ for (const match of siteModes) {
           'https://example.com/',
           true,
         ],
-        ['scheme-less local HTTP', 'skynet.local', 'http://skynet.local:5000/', true],
+        ['scheme-less local HTTP', 'nas.local', 'http://nas.local:5000/', true],
         ['scheme-less private IP HTTP', '192.168.0.11', 'http://192.168.0.11:5000/', true],
         ['scheme-less localhost HTTP', 'localhost:3000', 'http://localhost:3000/', true],
         [
           'explicit HTTPS cannot downgrade locally',
-          'https://skynet.local',
-          'http://skynet.local/',
+          'https://nas.local',
+          'http://nas.local/',
           false,
         ],
-        ['explicit HTTP stays HTTP', 'http://skynet.local', 'https://skynet.local/', false],
+        ['explicit HTTP stays HTTP', 'http://nas.local', 'https://nas.local/', false],
         ['public HTTP is never fillable', 'example.com', 'http://example.com/', false],
         [
           'explicit local HTTP port 80 stays restrictive',
-          'http://skynet.local:80',
-          'http://skynet.local:5000/',
+          'http://nas.local:80',
+          'http://nas.local:5000/',
           false,
         ],
-        ['explicit HTTP default port', 'http://skynet.local:80', 'http://skynet.local/', true],
-        ['different device', 'skynet.local', 'https://other.local:5001/', false],
+        ['explicit HTTP default port', 'http://nas.local:80', 'http://nas.local/', true],
+        ['different device', 'nas.local', 'https://other.local:5001/', false],
         ['IPv4 same address', '192.168.0.11', 'https://192.168.0.11:5001/', true],
         ['IPv4 different address', '192.168.0.11', 'https://192.168.0.12:5001/', false],
         ['IPv6 omitted port', '[::1]', 'https://[::1]:5001/', true],
@@ -209,16 +209,11 @@ for (const match of baseModes)
         ['private suffix alone', 'https://github.io', 'https://alice.github.io/', false],
         [
           'local parent does not include child',
-          'https://skynet.local',
-          'https://admin.skynet.local/',
+          'https://nas.local',
+          'https://admin.nas.local/',
           false,
         ],
-        [
-          'local siblings stay separate',
-          'https://a.skynet.local',
-          'https://b.skynet.local/',
-          false,
-        ],
+        ['local siblings stay separate', 'https://a.nas.local', 'https://b.nas.local/', false],
         [
           'unknown suffix siblings stay separate',
           'https://a.company.internal',
@@ -261,8 +256,8 @@ void describe('exact matching', () => {
         true,
       ],
       ['scheme-less HTTPS root', 'example.com', 'https://example.com/', true],
-      ['scheme-less exact stays HTTPS', 'skynet.local', 'http://skynet.local/', false],
-      ['different port', 'https://skynet.local', 'https://skynet.local:5001/', false],
+      ['scheme-less exact stays HTTPS', 'nas.local', 'http://nas.local/', false],
+      ['different port', 'https://nas.local', 'https://nas.local:5001/', false],
       ['different path', 'https://example.com/login', 'https://example.com/other', false],
       ['path case differs', 'https://example.com/Login', 'https://example.com/login', false],
       [
@@ -290,7 +285,7 @@ void describe('exact matching', () => {
         'https://example.com/a/b',
         false,
       ],
-      ['explicit local HTTP', 'http://skynet.local:5000/', 'http://skynet.local:5000/', true],
+      ['explicit local HTTP', 'http://nas.local:5000/', 'http://nas.local:5000/', true],
     ],
     3,
   );
@@ -316,7 +311,7 @@ void describe('prefix matching', () => {
       ],
       ['root prefix', 'https://example.com', 'https://example.com/any', true],
       ['scheme-less prefix', 'example.com/login/', 'https://example.com/login/step', true],
-      ['scheme-less prefix stays HTTPS', 'skynet.local', 'http://skynet.local/', false],
+      ['scheme-less prefix stays HTTPS', 'nas.local', 'http://nas.local/', false],
       ['query prefix', 'https://example.com/?next=', 'https://example.com/?next=home', true],
       ['fragment prefix', 'https://example.com/#login', 'https://example.com/#login/step', true],
       ['different path', 'https://example.com/login/', 'https://example.com/logout/', false],
@@ -394,7 +389,7 @@ void describe('URL validation', () => {
   for (const input of [
     'https://example.com/',
     'http://example.com/',
-    'https://skynet.local:5001/',
+    'https://nas.local:5001/',
     'https://[::1]/',
   ]) {
     void it(`accepts ${input}`, () => assert.equal(webUrl(input)?.href, input));
@@ -444,7 +439,7 @@ void describe('fillable URL policy', () => {
   for (const host of [
     'localhost',
     'a.localhost',
-    'skynet.local',
+    'nas.local',
     '127.0.0.1',
     '127.255.255.255',
     '10.0.0.1',
@@ -459,7 +454,7 @@ void describe('fillable URL policy', () => {
   for (const host of [
     'example.com',
     'localhost.evil.test',
-    'skynet.local.evil.test',
+    'nas.local.evil.test',
     'router',
     'router.lan',
     '172.15.255.255',
@@ -484,7 +479,7 @@ void describe('server URL normalization', () => {
   for (const [input, expected] of [
     ['https://EXAMPLE.com:443/', 'https://example.com'],
     ['https://vault.example.com/base/', 'https://vault.example.com/base'],
-    ['https://skynet.local:8443', 'https://skynet.local:8443'],
+    ['https://nas.local:8443', 'https://nas.local:8443'],
   ]) {
     void it(`normalizes ${input}`, () => assert.equal(normalizeServer(input), expected));
   }

@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vp run @strongroom/desktop#dev",
     "start": "vp run @strongroom/desktop#start",
-    "build": "vp run --filter @strongroom/desktop --filter strongroom --fail-if-no-match build && vp run @strongroom/extension#build:extras && node apps/desktop/build/build-safari.mjs",
+    "build": "vp run --filter @strongroom/desktop --filter strongroom-raycast --filter strongroom --fail-if-no-match build && vp run @strongroom/extension#build:extras && node apps/desktop/build/build-safari.mjs",
     "test:matcher": "node --test tests/matching.test.mjs",
     "check": "pnpm run test:matcher && vp run @strongroom/extension#postinstall && vp check",
     "format": "vp fmt",

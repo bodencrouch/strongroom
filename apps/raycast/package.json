@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "strongroom",
+  "name": "strongroom-raycast",
   "title": "Strongroom",
   "description": "Unlock and search your Strongroom logins and secure notes.",
   "icon": "icon.png",
