@@ -24,4 +24,14 @@ Server classifications below come from Bitwarden's public documentation. They ar
 
 ## What the reverse-engineering covered
 
-Static analysis with [rea](https://github.com/morluto/rea) of the installed Chromium extension (version 2026.9.3): 109 files, 530 modules, no parse failures. The tool reports its relationship graphs are incomplete in places, so absence of a finding is not proof of absence. The desktop app and the `bw` CLI were located but not analyzed.
+Static analysis with [rea](https://github.com/morluto/rea). It parses the code as text and never runs it. Nothing installed was modified.
+
+| Build                 | Version  | Files | Modules       | Parse failures | Notes                                                                                                        |
+| --------------------- | -------- | ----- | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| Chromium extension    | 2026.9.3 | 109   | 530           | 0              |                                                                                                              |
+| Desktop app (Flatpak) | 2026.8.0 | 77    | 532           | 0              | 1 integrity mismatch on a native add-on, recorded as untrusted. 74 IPC operations and 1 context bridge found |
+| `bw` CLI              | 2026.6.0 | 6     | none reported | 0              | Single bundled file                                                                                          |
+
+rea says its relationship graphs are incomplete in places, so a missing finding is not proof that something is absent. Only a fraction of the desktop and CLI code is parsed into separate files, because the apps ship as large bundles.
+
+The analysis was used to confirm what each build is made of and which surfaces exist. The feature classification in the table above comes from Bitwarden's public documentation and has not been checked against the server source.
