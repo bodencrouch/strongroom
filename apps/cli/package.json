@@ -1,0 +1,14 @@
+{
+  "name": "@strongroom/cli",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "Command-line extras for Strongroom: one-time codes and vault health, on top of the official Bitwarden CLI.",
+  "bin": {
+    "strongroom": "src/index.ts"
+  },
+  "scripts": {
+    "start": "node src/index.ts"
+  },
+  "license": "MIT"
+}
