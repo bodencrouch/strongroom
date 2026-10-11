@@ -8,4 +8,4 @@
 - A locked vault must reject reads and fills immediately, including pending operations. Preserve this behavior during UI and lifecycle changes.
 - Derive browser origins from Chrome's trusted sender metadata. Re-check matching when releasing the selected credential.
 - Keep unknown item fields intact. Restrict edits and autofill to the supported personal-vault subset.
-- Keep the repository private until the owner asks to publish it.
+- The repository is public. Never commit secrets, session keys, or vault data.
