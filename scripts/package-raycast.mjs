@@ -25,7 +25,7 @@ for (const file of [
 cpSync(resolve(root, 'LICENSE'), resolve(output, 'LICENSE'));
 if (existsSync(resolve(source, 'metadata')))
   cpSync(resolve(source, 'metadata'), resolve(output, 'metadata'), { recursive: true });
-for (const file of ['protocol.ts', 'types.ts', 'totp.ts'])
+for (const file of ['protocol.ts', 'types.ts'])
   cpSync(resolve(root, 'packages/shared/src', file), resolve(output, 'src', file));
 const bridge = resolve(output, 'src/bridge.ts');
 writeFileSync(
