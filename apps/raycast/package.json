@@ -41,7 +41,7 @@
     "@strongroom/shared": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "22.19.17",
+    "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@raycast/eslint-config": "2.2.0",
     "eslint": "10.12.0",
