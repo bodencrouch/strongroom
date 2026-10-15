@@ -74,7 +74,7 @@ jobs:
         run: pnpm run ${{ matrix.script }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-desktop-${{ matrix.name }}
           path: |
@@ -101,7 +101,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run extension:zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-browser-extensions
           path: |
@@ -129,7 +129,7 @@ jobs:
       # Writes a tarball only. This does not publish it.
       - run: mkdir -p ../../release && npm pack --pack-destination ../../release
         working-directory: apps/cli
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-cli
           path: release/strongroom-*.tgz
