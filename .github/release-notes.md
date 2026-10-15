@@ -13,6 +13,6 @@ An unofficial desktop, browser and command-line client for Bitwarden. It is not 
 
 - Desktop: Linux `.AppImage` and `.deb`, Windows `.exe`, macOS `.dmg` and `.zip`.
 - Browser extension zips for Chrome and Firefox, plus the Firefox sources zip.
-- Raycast extension source zip.
+- The Raycast extension is not included yet.
 - `strongroom-*.tgz`: the command line tool (`strongroom totp`, `strongroom health`, `strongroom attach`). It is not on npm yet.
 - `SHA256SUMS`: check your download with `sha256sum -c SHA256SUMS`.
