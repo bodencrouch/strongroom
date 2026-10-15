@@ -37,15 +37,15 @@
     "lint": "ray lint"
   },
   "dependencies": {
-    "@raycast/api": "2.6.0",
+    "@raycast/api": "2.7.3",
     "@strongroom/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "22.19.17",
-    "@types/react": "19.0.10",
+    "@types/react": "19.3.0",
     "@raycast/eslint-config": "2.2.0",
-    "eslint": "10.11.0",
-    "prettier": "3.9.9",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
     "typescript": "7.0.2"
   }
 }
