@@ -20,7 +20,7 @@
     "typecheck": "vp lint src"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "license": "MIT"
 }
